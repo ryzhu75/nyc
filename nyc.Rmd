@@ -5,24 +5,147 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(janitor)
+library(skimr)
+library(infer)
 ```
 
-## R Markdown
+```{r}
+# Read in main data set
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+data <- read.csv("raw/schma19962016.csv") %>% 
+  clean_names()
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+addon <- read_csv("raw/stchso20052016.csv") %>% 
+  clean_names()
 
-```{r cars}
-summary(cars)
+# Create a list of schools so that I can see how they are named in this data
+
+schools <- data %>% 
+  select(schnam) %>% 
+  distinct(schnam) %>% 
+  arrange(schnam)
+
+# Create a list of NYC's specialized schools
+
+selective_schools_list <- c("BRONX HIGH SCHOOL OF SCIENCE", "BROOKLYN TECHNICAL HIGH SCHOOL", "STATEN ISLAND TECHNICAL HS", "STUYVESANT HIGH SCHOOL", "BROOKLYN LATIN, THE", "QUEENS HIGH SCHOOL FOR THE SCIENCES AT YORK COLLEG", "HIGH SCHOOL FOR MATHEMATICS, SCIENCE AND ENGINEERI", "HIGH SCHOOL OF AMERICAN STUDIES AT LEHMAN COLLEGE")
+
+# Create a dataset that filters out observations for selective schools
+
+selective_schools <- data %>% 
+  filter(schnam %in% selective_schools_list)
+
+selective_schools %>% 
+  select(schnam, year, enrnumafm)
+
+
+selective_schools %>% 
+  ggplot(aes(x = year, y = enrnumafm/enrnumtot, color = schnam)) +
+  geom_point()
+  
+selective_schools %>% 
+  ggplot(aes(x = year, y = enrnumasi/enrnumtot, color = schnam)) +
+  geom_point()
+  
+selective_schools %>% 
+  ggplot(aes(x = year, y = enrnumwht/enrnumtot, color = schnam)) +
+  geom_point()
+
+selective_schools %>% 
+  ggplot(aes(x = year, y = ppexpotps, color = schnam)) +
+  geom_point()
 ```
 
-## Including Plots
+```{r Graduation Rates Cutoff COmparison}
 
-You can also embed plots, for example:
+pct_graduate <- data %>% 
+  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Plot all schools by year and graduation rates
+
+data %>% 
+  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot, enrnumg12) %>% 
+  ggplot(aes(x = year, y = hsopcthsgtot, color = schnam)) + 
+  geom_jitter() +
+  theme(legend.position = "none")
+
+# Filter for observations with percentage graduation numbers
+
+#data_1 <- data %>% 
+ # filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
+  #select(schnam, year, hsopcthsgtot, enrnumg12) %>% 
+  #group_by(schnam) %>%
+  #nest() 
+
+#data_2 <- data_1 %>% 
+  #mutate(schools_below_45 = map(data, ~ifelse(.[[1]] == 2005 & .[[2]] <= 55,
+   #                                           schnam,
+    #                                          0
+     #                                         )),
+      #   yes_no = ifelse(any(0 == schools_below_45),
+        #                 TRUE,
+       #                  FALSE))
+
+#data_3 <- data_1 %>% 
+ # mutate(schools_below_45 = ifelse(any(2005 == data[[1]]) & 
+   #                                any(data[[2]] <= 55),
+  #                                 as.character(schnam),
+  #                                  "a"
+   #                               ))
+
+
+
+# Find out which year starts having accurate graduation rate data
+
+data %>% 
+  group_by(year) %>% 
+  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot) %>% 
+  count()
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+data_phase <- data %>% 
+  select(lcggrd, schnam, year, bnlong_phasedout19962016, bnlong_totalyrs, bnlong_yrfirst, bnlong_yrlast, hsoschnam) %>% 
+  group_by(bnlong_phasedout19962016, bnlong_totalyrs) %>% 
+  count()
+
+  
+
+# Filter for high schools (defined as schools serving 9-12 at least)  
+
+data_hs <- data %>% 
+  filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 
+         & !is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot) %>% 
+  group_by(year) %>% 
+  mutate(percent_rank = percent_rank(hsopcthsgtot))
+
+data_hs %>% 
+  filter(schnam %in% selective_schools_list) %>% 
+  ggplot(aes(x= year, y = percent_rank, color = schnam)) +
+  geom_line() +
+  theme(legend.position = "none")
+
+skim(data_hs)
+
+data_hs
+
+  
+addon_hs <- addon %>% 
+  filter(!is.na(hsoschnam)) %>% 
+  select(schnam, hsoschnam, hsonumhsgtot, hsonumcohnyc, hsouts220002015)
+
+
+```
+
+
+
+
+
