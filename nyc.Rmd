@@ -37,41 +37,43 @@ selective_schools_list <- c("BRONX HIGH SCHOOL OF SCIENCE", "BROOKLYN TECHNICAL 
 selective_schools <- data %>% 
   filter(schnam %in% selective_schools_list)
 
-selective_schools %>% 
-  select(schnam, year, enrnumafm)
-
-
-selective_schools %>% 
-  ggplot(aes(x = year, y = enrnumafm/enrnumtot, color = schnam)) +
-  geom_point()
-  
-selective_schools %>% 
-  ggplot(aes(x = year, y = enrnumasi/enrnumtot, color = schnam)) +
-  geom_point()
-  
-selective_schools %>% 
-  ggplot(aes(x = year, y = enrnumwht/enrnumtot, color = schnam)) +
-  geom_point()
-
-selective_schools %>% 
-  ggplot(aes(x = year, y = ppexpotps, color = schnam)) +
-  geom_point()
 ```
 
-```{r Graduation Rates Cutoff COmparison}
+```{r Graduation Rates Cutoff Comparison}
 
-pct_graduate <- data %>% 
-  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
-  select(schnam, year, hsopcthsgtot)
+# Filter for high schools (defined as schools serving 9-12 at least)  
+
+data_hs <- data %>% 
+  filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 
+         & !is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot) %>% 
+  group_by(year) %>% 
+  mutate(percent_rank = percent_rank(hsopcthsgtot))
 
 # Plot all schools by year and graduation rates
 
-data %>% 
-  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
-  select(schnam, year, hsopcthsgtot, enrnumg12) %>% 
+data_hs %>% 
+  filter(hsopcthsgtot != is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot) %>% 
   ggplot(aes(x = year, y = hsopcthsgtot, color = schnam)) + 
   geom_jitter() +
   theme(legend.position = "none")
+
+# Plot percentile rank of school over time
+
+data_hs %>% 
+  filter(schnam %in% selective_schools_list) %>% 
+  ggplot(aes(x= year, y = percent_rank, color = schnam)) +
+  geom_line() +
+  theme(legend.position = "none")
+
+# Find out valid observations of graduation rates per year
+
+data %>% 
+  group_by(year) %>% 
+  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
+  select(schnam, year, hsopcthsgtot) %>% 
+  count()
 
 # Filter for observations with percentage graduation numbers
 
@@ -97,53 +99,8 @@ data %>%
   #                                  "a"
    #                               ))
 
-
-
-# Find out which year starts having accurate graduation rate data
-
-data %>% 
-  group_by(year) %>% 
-  filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
-  select(schnam, year, hsopcthsgtot) %>% 
-  count()
-
 ```
 
-```{r}
-
-data_phase <- data %>% 
-  select(lcggrd, schnam, year, bnlong_phasedout19962016, bnlong_totalyrs, bnlong_yrfirst, bnlong_yrlast, hsoschnam) %>% 
-  group_by(bnlong_phasedout19962016, bnlong_totalyrs) %>% 
-  count()
-
-  
-
-# Filter for high schools (defined as schools serving 9-12 at least)  
-
-data_hs <- data %>% 
-  filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 
-         & !is.na(hsopcthsgtot)) %>% 
-  select(schnam, year, hsopcthsgtot) %>% 
-  group_by(year) %>% 
-  mutate(percent_rank = percent_rank(hsopcthsgtot))
-
-data_hs %>% 
-  filter(schnam %in% selective_schools_list) %>% 
-  ggplot(aes(x= year, y = percent_rank, color = schnam)) +
-  geom_line() +
-  theme(legend.position = "none")
-
-skim(data_hs)
-
-data_hs
-
-  
-addon_hs <- addon %>% 
-  filter(!is.na(hsoschnam)) %>% 
-  select(schnam, hsoschnam, hsonumhsgtot, hsonumcohnyc, hsouts220002015)
-
-
-```
 
 
 
