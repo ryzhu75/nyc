@@ -10,6 +10,7 @@ library(dplyr)
 library(janitor)
 library(skimr)
 library(infer)
+library(readxl)
 ```
 
 ```{r}
@@ -30,12 +31,12 @@ schools <- data %>%
 
 # Create a list of NYC's specialized schools
 
-selective_schools_list <- c("BRONX HIGH SCHOOL OF SCIENCE", "BROOKLYN TECHNICAL HIGH SCHOOL", "STATEN ISLAND TECHNICAL HS", "STUYVESANT HIGH SCHOOL", "BROOKLYN LATIN, THE", "QUEENS HIGH SCHOOL FOR THE SCIENCES AT YORK COLLEG", "HIGH SCHOOL FOR MATHEMATICS, SCIENCE AND ENGINEERI", "HIGH SCHOOL OF AMERICAN STUDIES AT LEHMAN COLLEGE")
+selective_schools <- c("BRONX HIGH SCHOOL OF SCIENCE", "BROOKLYN TECHNICAL HIGH SCHOOL", "STATEN ISLAND TECHNICAL HS", "STUYVESANT HIGH SCHOOL", "BROOKLYN LATIN, THE", "QUEENS HIGH SCHOOL FOR THE SCIENCES AT YORK COLLEG", "HIGH SCHOOL FOR MATHEMATICS, SCIENCE AND ENGINEERI", "HIGH SCHOOL OF AMERICAN STUDIES AT LEHMAN COLLEGE")
 
 # Create a dataset that filters out observations for selective schools
 
-selective_schools <- data %>% 
-  filter(schnam %in% selective_schools_list)
+data_selective_schools <- data %>% 
+  filter(schnam %in% selective_schools)
 
 ```
 
@@ -62,7 +63,7 @@ data_hs %>%
 # Plot percentile rank of school over time
 
 data_hs %>% 
-  filter(schnam %in% selective_schools_list) %>% 
+  filter(schnam %in% selective_schools) %>% 
   ggplot(aes(x= year, y = percent_rank, color = schnam)) +
   geom_line() +
   theme(legend.position = "none")
@@ -75,31 +76,110 @@ data %>%
   select(schnam, year, hsopcthsgtot) %>% 
   count()
 
-# Filter for observations with percentage graduation numbers
+```
 
-#data_1 <- data %>% 
- # filter(hsopctdchtot != is.na(hsopcthsgtot)) %>% 
-  #select(schnam, year, hsopcthsgtot, enrnumg12) %>% 
-  #group_by(schnam) %>%
-  #nest() 
+```{r Explore 2005-2015 Graduation Rate Data, echo = FALSE}
+#Load in 2005-15 graduation rate data and clean variable names
+grad_rates_20052015 <- read_excel("raw/graduationrates/2005-2015_Graduation_Rates_Public_School.xlsx") %>% 
+  clean_names() 
 
-#data_2 <- data_1 %>% 
-  #mutate(schools_below_45 = map(data, ~ifelse(.[[1]] == 2005 & .[[2]] <= 55,
-   #                                           schnam,
-    #                                          0
-     #                                         )),
-      #   yes_no = ifelse(any(0 == schools_below_45),
-        #                 TRUE,
-       #                  FALSE))
+# Clean the data so that it only contains observations of graduation classes for 4 Year August (or 4 Year June if August is not available)
+grad_rates_clean <- grad_rates_20052015 %>% 
+  filter(str_detect(cohort_category,"4 Year"), 
+         demographic == "English Language Proficient")
 
-#data_3 <- data_1 %>% 
- # mutate(schools_below_45 = ifelse(any(2005 == data[[1]]) & 
-   #                                any(data[[2]] <= 55),
-  #                                 as.character(schnam),
-  #                                  "a"
-   #                               ))
+grad_rates_clean$cohort_category <- factor(grad_rates_clean$cohort_category, levels = c("4 Year August", "4 Year  June"))
+
+grad_rates_clean <- grad_rates_clean[order(grad_rates_clean$cohort_category),]
+
+grad_rates_clean[!duplicated(grad_rates_clean[,c('school', 'cohort_year')]),]
+
+grad_rates_clean <- grad_rates_clean %>% 
+  group_by(dbn) %>% 
+  arrange(cohort_year, .by_group = TRUE)
+
+# Filter only for non "s" values of graduation percentage
+# Turn Graduation percentage from chr to dbl
+grad_rates_clean <- grad_rates_clean %>% 
+  filter(total_grads_percent_of_cohort != "s") %>% 
+  mutate(total_grads_percent_of_cohort = as.double(total_grads_percent_of_cohort))
+  
+
+# Plot 
+# Must manually get rid of y labels and ticks or else it looks terrible
+
+grad_rates_clean %>% 
+  select(dbn, cohort_year, total_grads_percent_of_cohort) %>% 
+  filter(total_grads_percent_of_cohort != "s") %>% 
+  ggplot(aes(x = cohort_year, y = total_grads_percent_of_cohort, color = dbn)) +
+  geom_point() +
+  theme_classic() + 
+  theme(legend.position = "none",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+
+```{r Compare Graduation Quintiles, echo = FALSE}
+# Identify schools in the bottom quintile of graduation rates in for cohort 2001
+grad_percentile_2001_20 <- grad_rates_clean %>%
+  filter(cohort_year == 2001) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  quantile(.2) 
+
+# Identify schools in the top quintile of graduation rates for cohort 2001
+grad_percentile_2001_80 <- grad_rates_clean %>%
+  filter(cohort_year == 2001) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  quantile(.8)  
+
+# Find the difference between the 20th percentile and the 80th percentile
+grad_diff_2001 <- grad_percentile_2001_80 - grad_percentile_2001_20
+
+# Identify schools in the bottom quintile of graduation rates in for cohort 2011
+grad_percentile_2011_20 <- grad_rates_clean %>%
+  filter(cohort_year == 2011) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  quantile(.2) 
+
+# Identify schools in the top quintile of graduation rates for cohort 2011
+grad_percentile_2011_80 <- grad_rates_clean %>%
+  filter(cohort_year == 2011) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  quantile(.8)  
+
+# Find the difference between the 20th percentile and the 80th percentile in 2011
+grad_diff_2011 <- grad_percentile_2011_80 - grad_percentile_2011_20
+
+# Find the average grdaution rate of schools in the bottom 20th percentile
+avg_grad_20 <- grad_rates_clean %>% 
+  filter(cohort_year == 2001) %>% 
+  filter(total_grads_percent_of_cohort <= grad_percentile_2001_20) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  mean()
+
+# Find the average graduation rate of schools in the top 20th percentile
+avg_grad_80 <- grad_rates_clean %>% 
+  filter(cohort_year == 2001) %>% 
+  filter(total_grads_percent_of_cohort >= grad_percentile_2001_80) %>% 
+  pull(total_grads_percent_of_cohort) %>% 
+  mean()
+
+#Find the difference between 20th percentile and 80th percentile
+grad_diff_avg_2001 <- avg_grad_80 - avg_grad_20
+```
+
+
+```{r Count observations per year, echo = FALSE}
+# Count observations per year
+grad_rates_clean %>% 
+  ungroup(dbn, school) %>% 
+  group_by(cohort_year) %>% 
+  count()
+
 
 ```
+
 
 
 
