@@ -102,7 +102,11 @@ grad_rates_clean <- grad_rates_clean %>%
 # Turn Graduation percentage from chr to dbl
 grad_rates_clean <- grad_rates_clean %>% 
   filter(total_grads_percent_of_cohort != "s") %>% 
-  mutate(total_grads_percent_of_cohort = as.double(total_grads_percent_of_cohort))
+  mutate(total_grads_percent_of_cohort = as.double(total_grads_percent_of_cohort),
+         total_regents_percent_of_cohort = as.double(total_regents_percent_of_cohort),
+         total_regents_percent_of_grads = as.double(total_regents_percent_of_grads),
+         advanced_regents_percent_of_cohort = as.double(advanced_regents_percent_of_cohort),
+         advanced_regents_percent_of_grads = as.double(advanced_regents_percent_of_grads))
   
 
 # Plot 
@@ -121,6 +125,9 @@ grad_rates_clean %>%
 
 
 ```{r Compare Graduation Quintiles, echo = FALSE}
+
+
+# Create dataset that describes 20,50,80 percentiles of graduation per year
 grad_rates_nest <- grad_rates_clean %>% 
   group_by(cohort_year) %>% 
   nest() %>% 
@@ -130,11 +137,64 @@ grad_rates_nest <- grad_rates_clean %>%
   arrange(cohort_year) %>% 
   select(-data)
 
+#Graph the median result with errorbars at 80 and 20
 grad_rates_nest %>% 
   ggplot(aes(x = cohort_year, y = percentile_50)) +
   geom_point() +
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
 
+```
+
+```{r Compare Regents Quintiles, echoh = FALSE}
+# Create dataset that describes 20,50,80 percentiles of regents/cohort per year
+grad_rates_regents_cohort <- grad_rates_clean %>% 
+  group_by(cohort_year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[9]], probs = .2)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[9]], probs = .8)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[9]], probs = .5))) %>% 
+  arrange(cohort_year) %>% 
+  select(-data)
+
+#Graph the median result with errorbars at 80 and 20
+grad_rates_regents_cohort %>% 
+  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
+
+
+# Create dataset that describes 20,50,80 percentiles of regents/grads per year
+grad_rates_regents_grads <- grad_rates_clean %>% 
+  group_by(cohort_year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[10]], probs = .2, na.rm = TRUE)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[10]], probs = .8, na.rm = TRUE)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[10]], probs = .5, na.rm = TRUE))) %>% 
+  arrange(cohort_year) %>% 
+  select(-data)
+
+#Graph the median result with errorbars at 80 and 20
+grad_rates_regents_grads %>% 
+  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
+
+
+# Create dataset that describes 20,50,80 percentiles of adv regents/cohort
+grad_rates_advregents_cohort <- grad_rates_clean %>% 
+  group_by(cohort_year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[13]], probs = .2, na.rm = TRUE)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[13]], probs = .8, na.rm = TRUE)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[13]], probs = .5, na.rm = TRUE))) %>% 
+  arrange(cohort_year) %>% 
+  select(-data)
+
+#Graph the median result with errorbars at 80 and 20
+grad_rates_advregents_cohort %>% 
+  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
 ```
 
 
