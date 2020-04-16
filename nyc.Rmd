@@ -121,52 +121,20 @@ grad_rates_clean %>%
 
 
 ```{r Compare Graduation Quintiles, echo = FALSE}
-# Identify schools in the bottom quintile of graduation rates in for cohort 2001
-grad_percentile_2001_20 <- grad_rates_clean %>%
-  filter(cohort_year == 2001) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  quantile(.2) 
+grad_rates_nest <- grad_rates_clean %>% 
+  group_by(cohort_year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[7]], probs = .2)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[7]], probs = .8)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[7]], probs = .5))) %>% 
+  arrange(cohort_year) %>% 
+  select(-data)
 
-# Identify schools in the top quintile of graduation rates for cohort 2001
-grad_percentile_2001_80 <- grad_rates_clean %>%
-  filter(cohort_year == 2001) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  quantile(.8)  
+grad_rates_nest %>% 
+  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
 
-# Find the difference between the 20th percentile and the 80th percentile
-grad_diff_2001 <- grad_percentile_2001_80 - grad_percentile_2001_20
-
-# Identify schools in the bottom quintile of graduation rates in for cohort 2011
-grad_percentile_2011_20 <- grad_rates_clean %>%
-  filter(cohort_year == 2011) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  quantile(.2) 
-
-# Identify schools in the top quintile of graduation rates for cohort 2011
-grad_percentile_2011_80 <- grad_rates_clean %>%
-  filter(cohort_year == 2011) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  quantile(.8)  
-
-# Find the difference between the 20th percentile and the 80th percentile in 2011
-grad_diff_2011 <- grad_percentile_2011_80 - grad_percentile_2011_20
-
-# Find the average grdaution rate of schools in the bottom 20th percentile
-avg_grad_20 <- grad_rates_clean %>% 
-  filter(cohort_year == 2001) %>% 
-  filter(total_grads_percent_of_cohort <= grad_percentile_2001_20) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  mean()
-
-# Find the average graduation rate of schools in the top 20th percentile
-avg_grad_80 <- grad_rates_clean %>% 
-  filter(cohort_year == 2001) %>% 
-  filter(total_grads_percent_of_cohort >= grad_percentile_2001_80) %>% 
-  pull(total_grads_percent_of_cohort) %>% 
-  mean()
-
-#Find the difference between 20th percentile and 80th percentile
-grad_diff_avg_2001 <- avg_grad_80 - avg_grad_20
 ```
 
 
