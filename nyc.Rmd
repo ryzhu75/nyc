@@ -22,6 +22,9 @@ data <- read.csv("raw/schma19962016.csv") %>%
 addon <- read_csv("raw/stchso20052016.csv") %>% 
   clean_names()
 
+#Load in collected data about new and failing schools
+old_new_schools <- read_excel("raw/oldnewssc.xlsx")
+
 # Create a list of schools so that I can see how they are named in this data
 
 schools <- data %>% 
@@ -47,7 +50,6 @@ data_selective_schools <- data %>%
 data_hs <- data %>% 
   filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 
          & !is.na(hsopcthsgtot)) %>% 
-  select(schnam, year, hsopcthsgtot) %>% 
   group_by(year) %>% 
   mutate(percent_rank = percent_rank(hsopcthsgtot))
 
@@ -77,6 +79,7 @@ data %>%
   count()
 
 ```
+
 
 ```{r Explore 2005-2015 Graduation Rate Data, echo = FALSE}
 #Load in 2005-15 graduation rate data and clean variable names
@@ -124,8 +127,56 @@ grad_rates_clean %>%
 ```
 
 
-```{r Compare Graduation Quintiles, echo = FALSE}
+```{r SSC analysis, echo = FALSE}
 
+large_failing_schools <- old_new_schools %>% 
+  select(old_dbn, old_schnam, last_old_year) %>% 
+  distinct() %>% 
+  pull(old_dbn)
+
+replacement_schools <- old_new_schools %>% 
+  select(new_dbn, new_schnam, first_year_end) %>% 
+  pull(new_dbn)
+
+data_hs %>% 
+  filter(dbn %in% large_failing_schools) %>% 
+  select(dbn,hsopcthsgtot) %>% 
+  arrange(dbn) %>% 
+  ggplot(aes(x = year, y = hsopcthsgtot, color = dbn)) +
+  geom_line()
+
+data_hs %>% 
+  filter(dbn %in% replacement_schools) %>% 
+  ggplot(aes(x = year, y = hsopcthsgtot, color = dbn)) +
+  geom_line()
+
+#Join the old new schools data table to the clean grad rates so I can see the
+#stats of all new schools and identified by old high school
+grad_rates_clean_append <- grad_rates_clean %>% 
+  filter(dbn %in% replacement_schools) %>% 
+  left_join(old_new_schools, by = c("dbn" = "new_dbn")) %>% 
+  filter(!is.na(old_dbn))
+
+
+# Plot average graduation rates of bew replacement schools organized by their former
+# large school
+grad_rates_clean_append %>% 
+  group_by(old_dbn, cohort_year) %>% 
+  summarize(mean_new_dbn = mean(total_grads_percent_of_cohort)) %>% 
+  ggplot(aes(x = cohort_year + 4, y = mean_new_dbn, color = old_dbn)) +
+  geom_line()
+
+
+grad_rates_clean %>% 
+  filter(dbn %in% old_new_schools$new_dbn) %>% 
+  ggplot(aes(x = cohort_year + 4, y = total_grads_percent_of_cohort, color = dbn)) + 
+  geom_line() +
+  theme(legend.position = "none")
+  
+
+```
+
+```{r Compare Graduation Quintiles, echo = FALSE}
 
 # Create dataset that describes 20,50,80 percentiles of graduation per year
 grad_rates_nest <- grad_rates_clean %>% 
