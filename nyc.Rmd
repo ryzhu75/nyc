@@ -224,12 +224,23 @@ grad_rates_clean %>%
         axis.ticks.y = element_blank())
 ```
 
-```{r Join both data sets (SCHMA + grad-rates2005-2010)}
+```{r Join both data sets (SCHMA + grad-rates2005-2010 + demo2006-2016)}
+
+# Join the three data sets
+# Because demo2006-2016 is missing 2005 data. I pulled those numbers from SCHMA
+# demo2006-2016 has more reliable data, excpt for 2005
 
 data_join <- data_hs %>% 
   full_join(grad_rates_clean, by = c("dbn", "year" = "grad_year")) %>% 
-  mutate(total_hs_enrollment = enrnumg09 + enrnumg10 + enrnumg11 + enrnumg12)
+  full_join(demo_20062016, by = c("dbn", "year" = "schoolyear")) %>% 
+  mutate(total_hs_enrollment_schnam = enrnumg09 + enrnumg10 + enrnumg11 + enrnumg12) %>% 
+  mutate(total_hs_enrollment = coalesce(total_hs_enrollment, as.double(total_hs_enrollment_schnam)))
 
+# tool to test commands
+#data_join %>% 
+ # select(dbn, schnam, year, total_hs_enrollment, total_hs_enrollment_schnam) %>% 
+ # arrange(dbn, year) %>% 
+ # mutate(total_hs_enrollment = coalesce(total_hs_enrollment, as.double(total_hs_enrollment_schnam)))
 ```
 
 
