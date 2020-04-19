@@ -11,6 +11,8 @@ library(janitor)
 library(skimr)
 library(infer)
 library(readxl)
+library(stringr)
+library(tidyr)
 ```
 
 ```{r}
@@ -42,6 +44,101 @@ data_selective_schools <- data %>%
   filter(schnam %in% selective_schools)
 
 ```
+
+```{r Load in and clean enrollment data 2006-2015, echo = FALSE}
+
+#Load in 2006-2012 and filter for high schools
+#Schoolyear was in 20xx20xx format, so I deleted first four digits
+#Had to convert to character form to do that
+#Filtered for grades 9-12 that were not NA count
+
+demo_20062012 <- read_csv("raw/enrollmentdata/2006_-_2012_School_Demographics_and_Accountability_Snapshot.csv") %>% 
+  clean_names() %>% 
+  mutate(schoolyear = as.character(schoolyear),
+         schoolyear = gsub('^.{4}', '', schoolyear),
+         schoolyear = as.numeric(schoolyear)) %>% 
+  filter(!is.na(grade9) & !is.na(grade10) & !is.na(grade11) &!is.na(grade12)) %>% 
+  mutate(total_hs_enrollment = grade9 + grade10 + grade11 + grade12)
+
+demo_20062012
+
+#Load in 2011-2016 and filter for high schools
+#Schoolyear was in 20xx-xx format so got rid of middle "x-x"
+#Filtered for grades 9-12 that were not 0 count
+#Coerce all character columns into numeric (get rid of '%' first)
+demo_20112016 <- read_csv("raw/enrollmentdata/2011_-_2016_Demographic_Snapshot.csv") %>% 
+  clean_names() %>% 
+  mutate(year = str_replace(year, pattern = "\\d[:punct:]\\d", replacement = ""),
+         year = as.numeric(year)) %>% 
+  filter(grade_9 != 0 & grade_10 != 0 & grade_11 != 0 & grade_12 != 0) %>% 
+  mutate(total_hs_enrollment = grade_9 + grade_10 + grade_11 + grade_12,
+         percent_asian = as.numeric(sub("%", "", percent_asian)),
+         percent_hispanic = as.numeric(sub("%", "", percent_hispanic)),
+         percent_black = as.numeric(sub("%", "", percent_black)),
+         percent_white = as.numeric(sub("%", "", percent_white)),
+         percent_female = as.numeric(sub("%", "", percent_female)),
+         percent_male = as.numeric(sub("%", "", percent_male)),
+         percent_other = as.numeric(sub("%", "", percent_other)),
+         percent_english_language_learners = as.numeric(sub("%", "", percent_english_language_learners)),
+         percent_poverty = as.numeric(sub("%", "", percent_poverty)),
+         percent_students_with_disabilities = as.numeric(sub("%", "", percent_students_with_disabilities))
+         ) 
+
+#Combined both data sets and combineed overlapping columns 
+#Demographic data per school from 2006-2016
+#Include only high school #s
+demo_20062016 <- demo_20062012 %>% 
+  filter(schoolyear != 2012) %>% 
+  full_join(demo_20112016, by = c("dbn", 
+                                  "schoolyear" = "year",
+                                  "total_enrollment",
+                                  "total_hs_enrollment",
+                                  "prek" = "grade_pk",
+                                  "k"= "grade_k",
+                                  "grade1" = "grade_1",
+                                  "grade2" = "grade_2",
+                                  "grade3" = "grade_3",
+                                  "grade4" = "grade_4",
+                                  "grade5" = "grade_5",
+                                  "grade6" = "grade_6",
+                                  "grade7" = "grade_7",
+                                  "grade8" = "grade_8",
+                                  "grade9" = "grade_9",
+                                  "grade10" = "grade_10",
+                                  "grade11" = "grade_11",
+                                  "grade12" = "grade_12",
+                                  "name" = "school_name",
+                                  "asian_num" = "number_asian",
+                                  "asian_per" = "percent_asian",
+                                  "black_num" = "number_black",
+                                  "black_per" = "percent_black", 
+                                  "hispanic_num" = "number_hispanic",
+                                  "hispanic_per" = "percent_hispanic", 
+                                  "white_num" = "number_white",
+                                  "white_per"= "percent_white",
+                                  "female_num" = "number_female",
+                                  "male_num" = "number_female",
+                                  "ell_num" = "number_english_language_learners",
+                                  "ell_percent" = "percent_english_language_learners",
+                                  "frl_percent" = "percent_poverty"
+                                  )) %>% 
+  mutate(fl_or_frl_lunch = coalesce(frl_percent, fl_percent)) %>% 
+  select(-prek, -k, -grade1, -grade2, -grade3, -grade4, -grade5, -grade6, -grade7, -grade8) %>% 
+  arrange(dbn, schoolyear) 
+
+
+# Commented code for loading in 2013-2018 data
+#demo_20132018 <- read_csv("raw/enrollmentdata/2013_-_2018_Demographic_Snapshot_School.csv") %>% 
+#  clean_names() %>% 
+#  mutate(year = str_replace(year, pattern = "\\d[:punct:]\\d", replacement = ""),
+#         year = as.numeric(year)) %>% 
+# filter(grade_9 != 0 & grade_10 != 0 & grade_11 != 0 & grade_12 != 0) %>% 
+#  mutate(total_hs_enrollment = grade_9 + grade_10 + grade_11 + grade_12)
+
+#demo_20132018 
+
+```
+
 
 ```{r Graduation Rates Cutoff Comparison}
 
@@ -130,7 +227,8 @@ grad_rates_clean %>%
 ```{r Join both data sets (SCHMA + grad-rates2005-2010)}
 
 data_join <- data_hs %>% 
-  full_join(grad_rates_clean, by = c("dbn", "year" = "grad_year"))
+  full_join(grad_rates_clean, by = c("dbn", "year" = "grad_year")) %>% 
+  mutate(total_hs_enrollment = enrnumg09 + enrnumg10 + enrnumg11 + enrnumg12)
 
 ```
 
@@ -237,7 +335,7 @@ closed_90_grad <- close_school_2005_graduation_rates %>%
 data_failing_open <- data_join %>% 
   
   #select only necessay information (faster processing)
-  select(dbn, school, year, total_grads_percent_of_cohort, enrnumg12) %>% 
+  select(dbn, school, year, total_grads_percent_of_cohort, total_hs_enrollment) %>% 
   
   #exclude NAs and schools that were either replaced or were replacements in '05
   filter(!is.na(total_grads_percent_of_cohort),
@@ -266,12 +364,20 @@ data_failing_open <- data_join %>%
          "grad_rates_fail" = ifelse(grad_2005 <= closed_90_grad &
                                     grad_2005 >= closed_10_grad,
                                     TRUE,
-                                    FALSE)) %>% 
+                                    FALSE),
+         
+         "avg_enrollment" = map_dbl(data, ~mean(.[[4]], na.rm = TRUE))) %>% 
   
-  # Filter for schools where graduation rates falls in the failing schools closed middle 50th percentile
+  # Filter for schools where graduation rates falls in the failing schools closed middle 80th percentile
   filter(grad_rates_fail == TRUE)
   
-                          
+# Plot the relationship between high school graduation and enrollment
+                  
+data_failing_open %>% 
+  unnest() %>% 
+  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y~x)
 
 ```
 
