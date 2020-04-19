@@ -205,58 +205,73 @@ graduation_rates_failing_closed_joined <- data_join %>%
   group_by(dbn) %>% 
   nest()
 
-#Find the average graduation rate of schools 
+#Find graduation rates of schools in the middle 80th percentile (excluded tail ends to exclude outliers)
 
 close_school_2005_graduation_rates <- data_join %>% 
   filter(year == 2005, 
          dbn %in% old_new_schools$old_dbn) %>% 
   select(dbn, schnam, school, total_grads_percent_of_cohort,hsopcthsgtot, hsopcthsgnyc) %>% 
-  summarize(percentile_25 = quantile(as.numeric(total_grads_percent_of_cohort), 
-                                     probs = 0.25, 
+  summarize(percentile_10 = quantile(as.numeric(total_grads_percent_of_cohort), 
+                                     probs = 0.1, 
                                      na.rm = TRUE),
-            percentile_75 = quantile(as.numeric(total_grads_percent_of_cohort),
-                                     probs = 0.75, 
+            percentile_90 = quantile(as.numeric(total_grads_percent_of_cohort),
+                                     probs = 0.9, 
                                      na.rm = TRUE),
             percentile_50 = quantile(as.numeric(total_grads_percent_of_cohort),
                                      probs = 0.5, 
                                      na.rm = TRUE))
 
-closed_25_grad <- close_school_2005_graduation_rates %>% 
-  pull(percentile_25)
+closed_10_grad <- close_school_2005_graduation_rates %>% 
+  pull(percentile_10)
 
 closed_50_grad <- close_school_2005_graduation_rates %>% 
   pull(percentile_50)
 
-closed_75_grad <- close_school_2005_graduation_rates %>% 
-  pull(percentile_75)
+closed_90_grad <- close_school_2005_graduation_rates %>% 
+  pull(percentile_90)
 
-# 25th percentile :24.8
+# 10th percentile :0.2389633206
 # 50th percentile: 0.3885992
-# 75th percentile: 0.351626
+# 90th percentile: 0.46599
 
 data_failing_open <- data_join %>% 
+  
+  #select only necessay information (faster processing)
+  select(dbn, school, year, total_grads_percent_of_cohort, enrnumg12) %>% 
+  
+  #exclude NAs and schools that were either replaced or were replacements in '05
+  filter(!is.na(total_grads_percent_of_cohort),
+         !dbn %in% old_new_schools$old_dbn &
+         !dbn %in% old_new_schools$new_dbn) %>% 
   group_by(dbn) %>% 
   nest() %>% 
-  mutate("?2015" = map_lgl(data, ~ifelse(2015 %in% .[[2]], 
+  
+  #create column that indicates if there is data from 05-15
+  mutate("avail20052015" = map_lgl(data, ~ifelse(2015 %in% .[[2]] & 2005 %in% .[[2]], 
                         TRUE,
-                        FALSE)))
-
-#  filter(total_grads_percent_of_cohort <= closed_75_grad &
-#         total_grads_percent_of_cohort >= closed_25_grad &
- #        !dbn %in% old_new_schools$old_dbn &
-  #      !dbn %in% old_new_schools$new_dbn ) %>% 
-#  select(dbn, school, total_grads_percent_of_cohort, enrnumg12) %>% 
- # group_by(school) %>% 
-  #nest()
-
-# What to do about schools that were closed later? Exclude them?
-
-#data_failing_open_2015 <- data_failing_open %>% 
- # mutate("yesno_2015" = map_lgl(data, ~ifelse(2015 %in% .[[1]], 
-            #       TRUE,
-             #      FALSE))) %>% 
-  #filter(yes#no_2015 == TRUE )
-#data_failing_open_2015
+                        FALSE))) %>% 
+  
+  # Create column that indicates it there is data from 2005
+  mutate("avail2005" = map_lgl(data, ~ifelse(2005 %in% .[[2]], 
+                        TRUE,
+                        FALSE))) %>% 
+  
+  # Filter for schools where there is available data from 2005
+  filter(avail2005  == TRUE) %>% 
+  
+  # Create new column that indicates the graduation rate of school in 2005 
+  mutate("grad_2005" = map_dbl(data, ~filter(., year == 2005) %>%           pull(total_grads_percent_of_cohort)),
+         
+         # Create column indicating if graduation rate falls in the failing schools closed middle 80th percentile
+         "grad_rates_fail" = ifelse(grad_2005 <= closed_90_grad &
+                                    grad_2005 >= closed_10_grad,
+                                    TRUE,
+                                    FALSE)) %>% 
+  
+  # Filter for schools where graduation rates falls in the failing schools closed middle 50th percentile
+  filter(grad_rates_fail == TRUE)
+  
+                          
 
 ```
 
