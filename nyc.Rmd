@@ -387,7 +387,7 @@ data_failing_open <- data_join %>%
 
 # Pull the dbn for all of these
 
-failing_2005_large_list <- data_failing_open %>% 
+failing_2005_list <- data_failing_open %>% 
   pull(dbn)
   
 ```
@@ -412,7 +412,12 @@ data_failing_open %>%
 
 data_failing_2005_small <- data_failing_open %>% 
   filter(enrollment_2005 <= 600 | is.na(enrollment_2005)) %>% 
-  unnest()
+  unnest() 
+  
+data_failing_2005_small_list <- data_failing_2005_small %>% 
+  group_by(dbn) %>% 
+  nest() %>% 
+  pull(dbn)
 
 data_failing_2005_small
 
@@ -475,8 +480,10 @@ failing_2005_large_open_2015_list <- failing_2005_large_open_2015 %>%
 
 replacement_schools_grad_vs_failing <- data_join %>% 
   filter(dbn %in% replacement_schools |
-          dbn %in% failing_2005_large_list |
-           dbn %in% large_failing_schools) %>% 
+         dbn %in% large_failing_schools |
+         dbn %in% failing_2005_large_open_shrank_list |
+         dbn %in% failing_2005_large_closed_list |
+         dbn %in% failing_2005_large_open_2015_list) %>% 
   
   # Did this to see if there was any pre-2005 data on large failing schools but seems like there isn't
   #mutate(total_grads_percent_of_cohort = coalesce(total_grads_percent_of_cohort, hsopcthsgnyc/100)) %>% 
@@ -487,20 +494,38 @@ replacement_schools_grad_vs_failing <- data_join %>%
                               ifelse(dbn %in% replacement_schools,
                                "Small Replacement Schools opened by 2005",
                                  ifelse(dbn %in% failing_2005_large_closed_list,
-                                      "Eventually Closed",
+                                      "Large Eventually Closed",
                                       ifelse(dbn %in% failing_2005_large_open_shrank_list,
-                                             "Shrank",
-                                             "Open and Large"))))) %>% 
+                                             "Large and Shrank",
+                                             "Large and Operating"))))) %>% 
   
   # Picked 2008 as an arbitrary date, just to show what graduation rates were like 
   # for schools that were closed
-  filter(!dbn %in% large_failing_schools | year <= 2008)
+  filter(!dbn %in% large_failing_schools | year <= 2008) %>% 
+  
+  # Started at '06 because 2005 had a small sample size of all the schools
+  # Data was also kinda wonky but not sure if that's a good reason for excluding
+  filter(!dbn %in% replacement_schools | year >= 2006)
 
 # Plot it
 replacement_schools_grad_vs_failing %>% 
   ggplot(aes(x = year, y = total_grads_percent_of_cohort, color = data_cat)) +
-  geom_smooth(method = "lm", se = FALSE)
+  geom_smooth(method = "lm",  se = FALSE)
 
+
+replacement_schools_grad_vs_failing %>% 
+  group_by(year, data_cat) %>% 
+  summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
+  ggplot(aes(x = year, y = avg_grad, color = data_cat)) +
+  geom_point() +
+  geom_line() +
+  xlim(2005, 2015) +
+  ylim(0.25, 0.8)
+
+
+data_join %>% 
+  filter(dbn == "29Q272") %>% 
+  select(dbn, school, total_grads_percent_of_cohort, hsonumcohtot, hsonumcohnyc, hsonumhsgtot)
 
 ```
 
