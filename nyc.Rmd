@@ -48,8 +48,7 @@ data_selective_schools <- data %>%
 # Filter for high schools (defined as schools serving 9-12 at least)  
 
 data_hs <- data %>% 
-  filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 
-         & !is.na(hsopcthsgtot)) %>% 
+  filter(enrnumg12 != 0 & enrnumg11 != 0 & enrnumg10  != 0 & enrnumg09 != 0 ) %>% 
   group_by(year) %>% 
   mutate(percent_rank = percent_rank(hsopcthsgtot))
 
@@ -81,7 +80,7 @@ data %>%
 ```
 
 
-```{r Explore 2005-2015 Graduation Rate Data, echo = FALSE}
+```{r grad_rates_clean (From grad rates 2005-2010), echo = FALSE}
 #Load in 2005-15 graduation rate data and clean variable names
 grad_rates_20052015 <- read_excel("raw/graduationrates/2005-2015_Graduation_Rates_Public_School.xlsx") %>% 
   clean_names() 
@@ -89,13 +88,15 @@ grad_rates_20052015 <- read_excel("raw/graduationrates/2005-2015_Graduation_Rate
 # Clean the data so that it only contains observations of graduation classes for 4 Year August (or 4 Year June if August is not available)
 grad_rates_clean <- grad_rates_20052015 %>% 
   filter(str_detect(cohort_category,"4 Year"), 
-         demographic == "English Language Proficient")
+         demographic == "English Language Proficient") %>% 
+  mutate(grad_year = cohort_year + 4)
 
 grad_rates_clean$cohort_category <- factor(grad_rates_clean$cohort_category, levels = c("4 Year August", "4 Year  June"))
 
 grad_rates_clean <- grad_rates_clean[order(grad_rates_clean$cohort_category),]
 
-grad_rates_clean[!duplicated(grad_rates_clean[,c('school', 'cohort_year')]),]
+grad_rates_clean <- grad_rates_clean[!duplicated(grad_rates_clean[,c('dbn', 'cohort_year')]),]
+
 
 grad_rates_clean <- grad_rates_clean %>% 
   group_by(dbn) %>% 
@@ -126,17 +127,30 @@ grad_rates_clean %>%
         axis.ticks.y = element_blank())
 ```
 
+```{r Join both data sets (SCHMA + grad-rates2005-2010)}
+
+data_join <- data_hs %>% 
+  full_join(grad_rates_clean, by = c("dbn", "year" = "grad_year"))
+
+```
+
 
 ```{r SSC analysis, echo = FALSE}
+
+# Pull a list of the large failing schools that housed new replacement schools
 
 large_failing_schools <- old_new_schools %>% 
   select(old_dbn, old_schnam, last_old_year) %>% 
   distinct() %>% 
   pull(old_dbn)
 
+# Pull a list of the small replacement schools 
 replacement_schools <- old_new_schools %>% 
   select(new_dbn, new_schnam, first_year_end) %>% 
   pull(new_dbn)
+
+
+# Graduation rates of large failing schools that were closed
 
 data_hs %>% 
   filter(dbn %in% large_failing_schools) %>% 
@@ -144,6 +158,8 @@ data_hs %>%
   arrange(dbn) %>% 
   ggplot(aes(x = year, y = hsopcthsgtot, color = dbn)) +
   geom_line()
+
+# Graduation rates of new repalcement schools
 
 data_hs %>% 
   filter(dbn %in% replacement_schools) %>% 
@@ -158,7 +174,7 @@ grad_rates_clean_append <- grad_rates_clean %>%
   filter(!is.na(old_dbn))
 
 
-# Plot average graduation rates of bew replacement schools organized by their former
+# Plot average graduation rates of new replacement schools organized by their former
 # large school
 grad_rates_clean_append %>% 
   group_by(old_dbn, cohort_year) %>% 
@@ -166,6 +182,7 @@ grad_rates_clean_append %>%
   ggplot(aes(x = cohort_year + 4, y = mean_new_dbn, color = old_dbn)) +
   geom_line()
 
+# Plot graduation rates of new replacements schools 
 
 grad_rates_clean %>% 
   filter(dbn %in% old_new_schools$new_dbn) %>% 
@@ -175,6 +192,74 @@ grad_rates_clean %>%
   
 
 ```
+
+```{r Find comparable schools that werent closed, echo = FALSE}
+
+# Explore data: Compare graduation metrics between the two data sets, organized by school across years
+# Seems like total_grads_percent_of_cohort is more in line with hsopcthsgnyc
+# Almost all schools have observations from 2005- we'll use that as a starting point
+  
+graduation_rates_failing_closed_joined <- data_join %>% 
+  filter(dbn %in% old_new_schools$old_dbn) %>% 
+  select(dbn, school, year, total_grads_percent_of_cohort, hsopcthsgtot, hsopcthsgnyc) %>% 
+  group_by(dbn) %>% 
+  nest()
+
+#Find the average graduation rate of schools 
+
+close_school_2005_graduation_rates <- data_join %>% 
+  filter(year == 2005, 
+         dbn %in% old_new_schools$old_dbn) %>% 
+  select(dbn, schnam, school, total_grads_percent_of_cohort,hsopcthsgtot, hsopcthsgnyc) %>% 
+  summarize(percentile_25 = quantile(as.numeric(total_grads_percent_of_cohort), 
+                                     probs = 0.25, 
+                                     na.rm = TRUE),
+            percentile_75 = quantile(as.numeric(total_grads_percent_of_cohort),
+                                     probs = 0.75, 
+                                     na.rm = TRUE),
+            percentile_50 = quantile(as.numeric(total_grads_percent_of_cohort),
+                                     probs = 0.5, 
+                                     na.rm = TRUE))
+
+closed_25_grad <- close_school_2005_graduation_rates %>% 
+  pull(percentile_25)
+
+closed_50_grad <- close_school_2005_graduation_rates %>% 
+  pull(percentile_50)
+
+closed_75_grad <- close_school_2005_graduation_rates %>% 
+  pull(percentile_75)
+
+# 25th percentile :24.8
+# 50th percentile: 0.3885992
+# 75th percentile: 0.351626
+
+data_failing_open <- data_join %>% 
+  group_by(dbn) %>% 
+  nest() %>% 
+  mutate("?2015" = map_lgl(data, ~ifelse(2015 %in% .[[2]], 
+                        TRUE,
+                        FALSE)))
+
+#  filter(total_grads_percent_of_cohort <= closed_75_grad &
+#         total_grads_percent_of_cohort >= closed_25_grad &
+ #        !dbn %in% old_new_schools$old_dbn &
+  #      !dbn %in% old_new_schools$new_dbn ) %>% 
+#  select(dbn, school, total_grads_percent_of_cohort, enrnumg12) %>% 
+ # group_by(school) %>% 
+  #nest()
+
+# What to do about schools that were closed later? Exclude them?
+
+#data_failing_open_2015 <- data_failing_open %>% 
+ # mutate("yesno_2015" = map_lgl(data, ~ifelse(2015 %in% .[[1]], 
+            #       TRUE,
+             #      FALSE))) %>% 
+  #filter(yes#no_2015 == TRUE )
+#data_failing_open_2015
+
+```
+
 
 ```{r Compare Graduation Quintiles, echo = FALSE}
 
