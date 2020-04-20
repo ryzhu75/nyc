@@ -394,14 +394,48 @@ failing_2005_list <- data_failing_open %>%
 ```
 
 
-```{r Visualizing failed but still open schools in 2005, echo = FALSE}
-# Plot the relationship between high school graduation and enrollment
-                  
-data_failing_open %>% 
+```{r Visualizing change in new york city high school composition by size, echo = FALSE}
+
+# All public school data
+
+# Plot Number of high schools by enrollment
+data_join %>% 
   unnest() %>% 
-  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
-  geom_point() +
-  geom_smooth(method = "lm", formula = y~x)
+  ungroup(year) %>% 
+  filter(year == 2015 |
+         year == 2008 |
+         year == 2007 |
+         year == 2005 ) %>% 
+  mutate(year = as.factor(year)) %>% 
+  ggplot(aes(x = total_hs_enrollment, fill = fct_rev(year))) +
+  geom_histogram(alpha= 0.5, position = "identity", color = "black") +
+  facet_wrap(~year) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  labs(title = "Number of High Schools by HS Enrollment 2005, 2007, 2008, 2015",
+       y = "# High Schools",
+       x = "Total High School Enrollment")
+
+# Plot distribution of high schools by enrollment
+# Problem is that the distributions are % of the TOTAL number of high schools across time, not just of that year
+
+data_join %>% 
+  unnest() %>% 
+  ungroup(year) %>% 
+  filter(year == 2015 |
+         year == 2008 |
+         year == 2007 |
+         year == 2005 ) %>% 
+  mutate(year = as.factor(year)) %>% 
+  ggplot(aes(x = total_hs_enrollment, fill = fct_rev(year))) +
+  geom_density(alpha= 0.5, color = "black") +
+  facet_wrap(~year) +
+  theme_classic() +
+  theme(legend.title = element_blank()) +
+  labs(title = "Distribution of High Schools by Enrollment '05, '07, '08, '15",
+       y = "% of Total High Schools",
+       x = "Total High School Enrollment")
+
 ```
 
 
