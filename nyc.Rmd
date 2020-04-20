@@ -770,12 +770,59 @@ grad_rates_advregents_cohort %>%
 ```
 
 
-```{r Count observations per year, echo = FALSE}
-# Count observations per year
-grad_rates_clean %>% 
-  ungroup(dbn, school) %>% 
-  group_by(cohort_year) %>% 
-  count()
+```{r Demographic Analysis, echo = FALSE}
+
+
+# Do I need to add the 05-16 stscho data? Currently not a part of data_join
+
+
+# Track racial demographic changes in replacement schools from 05-15
+data_join %>% 
+  filter(dbn %in% replacement_schools) %>% 
+  select(dbn, year, asian_per, hispanic_per, black_per, white_per) %>% 
+  pivot_longer(cols = ends_with("_per"), names_to = "demographic", values_to = "percent") %>% 
+  group_by(year, demographic) %>% 
+  summarize(avg_per = mean(percent, na.rm = TRUE)) %>% 
+  # Must use pivot longer on demo_per observations
+  ggplot(aes(x = year, y = avg_per, color = demographic)) +
+  geom_line() +
+  xlim(2005, 2015) +
+  theme_classic() 
+
+# Track racial demographic changes in schools that were announced for closure in 2005
+#### I need to compare the pre '05 data to replacement schools, hence why I was thinking of appending the stscho data
+
+data_join %>% 
+  filter(dbn %in% large_failing_schools) %>% 
+  select(dbn, year, asian_per, hispanic_per, black_per, white_per) %>% 
+  pivot_longer(cols = ends_with("_per"), names_to = "demographic", values_to = "percent") %>% 
+  group_by(year, demographic) %>% 
+  summarize(avg_per = mean(percent, na.rm = TRUE)) %>% 
+  # Must use pivot longer on demo_per observations
+  ggplot(aes(x = year, y = avg_per, color = demographic)) +
+  geom_line() +
+  scale_x_continuous(limits = c(2005, 2015),
+                     breaks = c(2005, 2010, 2015)) +
+  theme_classic() 
+
+# Track racial demographic changes in 4 large failing schools still open at the same size
+
+data_join %>% 
+  filter(dbn %in% failing_2005_large_open_2015_list) %>% 
+  select(dbn, year, asian_per, hispanic_per, black_per, white_per) %>% 
+  pivot_longer(cols = ends_with("_per"), names_to = "demographic", values_to = "percent") %>% 
+  group_by(year, demographic) %>% 
+  summarize(avg_per = mean(percent, na.rm = TRUE)) %>% 
+  # Must use pivot longer on demo_per observations
+  ggplot(aes(x = year, y = avg_per, color = demographic)) +
+  geom_line() +
+  xlim(2005, 2015) +
+  theme_classic() 
+
+
+# Average enrollments have stayed the same, but what about concentrations per school?
+# Current visualizations don't address the issue of segregation between schools.
+
 
 
 ```
