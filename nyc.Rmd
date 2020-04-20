@@ -15,7 +15,7 @@ library(stringr)
 library(tidyr)
 ```
 
-```{r}
+```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
 # Read in main data set
 
 data <- read.csv("raw/schma19962016.csv") %>% 
@@ -45,7 +45,7 @@ data_selective_schools <- data %>%
 
 ```
 
-```{r Load in and clean enrollment data 2006-2015, echo = FALSE}
+```{r Load in and clean enrollment data 2006-2015, include = FALSE}
 
 #Load in 2006-2012 and filter for high schools
 #Schoolyear was in 20xx20xx format, so I deleted first four digits
@@ -140,7 +140,7 @@ demo_20062016 <- demo_20062012 %>%
 ```
 
 
-```{r Graduation Rates Cutoff Comparison}
+```{r Graduation Rates Cutoff Comparison, include = FALSE}
 
 # Filter for high schools (defined as schools serving 9-12 at least)  
 
@@ -177,7 +177,7 @@ data %>%
 ```
 
 
-```{r grad_rates_clean (From grad rates 2005-2010), echo = FALSE}
+```{r grad_rates_clean (From grad rates 2005-2010), include = FALSE}
 #Load in 2005-15 graduation rate data and clean variable names
 grad_rates_20052015 <- read_excel("raw/graduationrates/2005-2015_Graduation_Rates_Public_School.xlsx") %>% 
   clean_names() 
@@ -224,7 +224,7 @@ grad_rates_clean %>%
         axis.ticks.y = element_blank())
 ```
 
-```{r Join both data sets (SCHMA + grad-rates2005-2010 + demo2006-2016)}
+```{r Join both data sets (SCHMA + grad-rates2005-2010 + demo2006-2016), include = FALSE}
 
 # Join the three data sets
 # Because demo2006-2016 is missing 2005 data. I pulled those numbers from SCHMA
@@ -244,7 +244,7 @@ data_join <- data_hs %>%
 ```
 
 
-```{r 2005 Replaced and Replacement Schools, echo = FALSE}
+```{r 2005 Replaced and Replacement Schools, include = FALSE}
 
 # Pull a list of the large failing schools that housed new replacement schools
 
@@ -255,6 +255,7 @@ large_failing_schools <- old_new_schools %>%
 
 # Pull a list of the small replacement schools 
 replacement_schools <- old_new_schools %>% 
+  filter(!is.na(old_schnam) ) %>% 
   select(new_dbn, new_schnam, first_year_end) %>% 
   pull(new_dbn)
 
@@ -425,6 +426,11 @@ data_failing_2005_small
 
 ```{r Large Failing Open in 2005, include = FALSE}
 
+# Filter for all large schools that were open in 2005
+failing_2005_large_list <- data_failing_open %>% 
+  filter(enrollment_2005 > 600) %>% 
+  pull(dbn)
+
 ## Failing Large Schools in 2005 that were open and eventually closed
 # Data 
 failing_2005_large_closed <- data_failing_open %>% 
@@ -455,7 +461,7 @@ failing_2005_large_open_shrank_list <- failing_2005_large_open_shrank %>%
   pull(dbn)
 
 
-# Data for failinig large schools in 2005 that are still open and maintain size
+# Data for failing large schools in 2005 that are still open and maintain size
 # Data
 failing_2005_large_open_2015 <- data_failing_open %>% 
   filter(avail2015 == TRUE) %>%
@@ -470,10 +476,59 @@ failing_2005_large_open_2015_list <- failing_2005_large_open_2015 %>%
   nest() %>% 
   pull(dbn)
 
+```
+
+```{r Compare closed, replacement schools with Large Failing Open Schools in 2005 , echo = TRUE}
+
+## Data for all large schools (>600) schools with graduation rates in the middle
+## 80th percentile
+## not yet announced for closure as of November 2005
+replacement_schools_vs_all_failing <- data_join %>% 
+  filter(dbn %in% replacement_schools |
+         dbn %in% large_failing_schools |
+         dbn %in% failing_2005_large_list) %>% 
+  select(dbn, year, total_grads_percent_of_cohort) %>% 
+  arrange(dbn, year) %>% 
+  mutate(data_cat = ifelse(dbn %in% large_failing_schools,
+                           "Announced for Closure in 2005",
+                              ifelse(dbn %in% replacement_schools,
+                               "Small Replacement Schools opened by 2005",
+                               "Failing Open Schools in 2005"))) %>% 
+  # Picked 2008 as an arbitrary date, just to show what graduation rates were like 
+  # for schools that were closed
+  filter(!dbn %in% large_failing_schools | year <= 2008) %>% 
+  
+  # Started at '06 because 2005 had a small sample size of all the schools
+  # Data was also kinda wonky but not sure if that's a good reason for excluding
+  filter(!dbn %in% replacement_schools | year >= 2006)
+
+# Plot average graduation rates of schools from 2005-2015, subsetted into:
+# 1) Closed failing schools 2) Small Replacement Schools 3) Open failing schools
+
+replacement_schools_vs_all_failing %>% 
+  group_by(year, data_cat) %>% 
+  summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
+  ggplot(aes(x = year, y = avg_grad, color = data_cat)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Average Graduation Rates from 2005-2015",
+       y = "Average Graduation Rate",
+       x = "School Year as of June") +
+  scale_color_discrete(name = "Category as of 2005", 
+                       labels = c("Announced for Closure", 
+                                  "Large Failing Open Schools", 
+                                  "Replacement Schools"),
+                       guide = guide_legend(reverse = TRUE)) +
+   scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
+   scale_y_continuous(limits = c(0.3, 0.8)) +
+   theme_classic() +
+   theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 
 ```
 
-```{r Compare Replacement Schools with Large Failing Open Schools in 2005, echo = TRUE}
+
+```{r Compare Replacement Schools with Large Failing Open Schools in 2005 sorted by large failing open schools outcomes, echo = FALSE}
 
 # Plot a line graph showing the relationship between year and graduation rates
 # per type of school
@@ -487,7 +542,7 @@ replacement_schools_grad_vs_failing <- data_join %>%
   
   # Did this to see if there was any pre-2005 data on large failing schools but seems like there isn't
   #mutate(total_grads_percent_of_cohort = coalesce(total_grads_percent_of_cohort, hsopcthsgnyc/100)) %>% 
-  select(dbn, year, total_grads_percent_of_cohort) %>% 
+  select(dbn, year, total_grads_percent_of_cohort, total_hs_enrollment) %>% 
   arrange(dbn, year) %>% 
   mutate(data_cat = ifelse(dbn %in% large_failing_schools,
                            "Announced for Closure in 2005",
@@ -512,15 +567,56 @@ replacement_schools_grad_vs_failing %>%
   ggplot(aes(x = year, y = total_grads_percent_of_cohort, color = data_cat)) +
   geom_smooth(method = "lm",  se = FALSE)
 
-
+# Plot that average graduation rates by category across years
 replacement_schools_grad_vs_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
   ggplot(aes(x = year, y = avg_grad, color = data_cat)) +
   geom_point() +
   geom_line() +
-  xlim(2005, 2015) +
-  ylim(0.25, 0.8)
+  labs(title = "Average Graduation Rates from 2005-2015",
+       y = "Average Graduation Rate",
+       x = "School Year as of June") +
+  scale_color_discrete(name = "Category as of 2015",
+                       breaks = c("Small Replacement Schools opened by 2005",
+                                  "Announced for Closure in 2005",
+                                  "Large and Operating",
+                                  "Large and Shrank",
+                                  "Large Eventually Closed"), 
+                       labels = c("Replacement Schools (2005)", 
+                                  "Announced for Closure (2005)", 
+                                  "Open",
+                                  "Shrank",
+                                  "Closed")) +
+   scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
+   scale_y_continuous(limits = c(0.3, 0.8)) +
+   theme_classic() 
+
+# Plot average enrollment sizes by category across years
+replacement_schools_grad_vs_failing %>% 
+  group_by(year, data_cat) %>% 
+  summarize(avg_hs_enrollment = mean(total_hs_enrollment, na.rm =TRUE)) %>% 
+  ggplot(aes(x = year, y = avg_hs_enrollment, color = data_cat)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Average HS Enrollment from 2005-2015",
+       y = "Average Graduation Rate",
+       x = "School Year as of June") +
+  scale_color_discrete(name = "Category as of 2015",
+                       breaks = c("Small Replacement Schools opened by 2005",
+                                  "Announced for Closure in 2005",
+                                  "Large and Operating",
+                                  "Large and Shrank",
+                                  "Large Eventually Closed"), 
+                       labels = c("Replacement Schools (2005)", 
+                                  "Announced for Closure (2005)", 
+                                  "Open",
+                                  "Shrank",
+                                  "Closed")) +
+   scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
+   theme_classic() +
+   theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 
 
 data_join %>% 
@@ -533,58 +629,95 @@ data_join %>%
 ```{r Compare Graduation Quintiles, echo = FALSE}
 
 # Create dataset that describes 20,50,80 percentiles of graduation per year
-grad_rates_nest <- grad_rates_clean %>% 
-  group_by(cohort_year) %>% 
+grad_rates_nest <- data_join %>% 
+  select(dbn, year, total_grads_percent_of_cohort) %>% 
+  group_by(year) %>% 
   nest() %>% 
-  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[7]], probs = .2)),
-         percentile_80 = map_dbl(data,  ~ quantile(.[[7]], probs = .8)),
-         percentile_50 = map_dbl(data,  ~ quantile(.[[7]], probs = .5))) %>% 
-  arrange(cohort_year) %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[2]], probs = .2, na.rm = TRUE)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[2]], probs = .8, na.rm = TRUE)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[2]], probs = .5, na.rm = TRUE))) %>% 
+  arrange(year) %>% 
   select(-data)
 
 #Graph the median result with errorbars at 80 and 20
 grad_rates_nest %>% 
-  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  ggplot(aes(x = year, y = percentile_50)) +
   geom_point() +
-  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
+  labs(title = "HS Graduation Rates 2005-2015",
+       subtitle = "20, 50, 80 Percentiles",
+       y = "Graduation Rate",
+       x = "School Year as of June") +
+  scale_x_continuous(breaks = c(2005, 2010, 2015),
+                     limits = c(2004, 2016)) +
+  scale_y_continuous(limits = c(.3, 1)) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 
 ```
 
-```{r Compare Regents Quintiles, echoh = FALSE}
+```{r Compare Regent/Cohort Quintiles, echo = FALSE}
 # Create dataset that describes 20,50,80 percentiles of regents/cohort per year
 grad_rates_regents_cohort <- grad_rates_clean %>% 
   group_by(cohort_year) %>% 
   nest() %>% 
   mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[9]], probs = .2)),
          percentile_80 = map_dbl(data,  ~ quantile(.[[9]], probs = .8)),
-         percentile_50 = map_dbl(data,  ~ quantile(.[[9]], probs = .5))) %>% 
+         percentile_50 = map_dbl(data,  ~ quantile(.[[9]], probs = .5)),
+         year = cohort_year + 4) %>% 
   arrange(cohort_year) %>% 
   select(-data)
 
 #Graph the median result with errorbars at 80 and 20
 grad_rates_regents_cohort %>% 
-  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  ggplot(aes(x = year, y = percentile_50)) +
   geom_point() +
-  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
+  labs(title = "Regent Diploma Rate per Cohort 2005-2015",
+       subtitle = "20, 50, 80 Percentiles",
+       y = "Regent Diploma Rate (Cohort)",
+       x = "School Year as of June") +
+  scale_x_continuous(breaks = c(2005, 2010, 2015),
+                     limits = c(2004, 2016)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
 
 
+```{r Compare Regents per Graduates Quintiles, include = FALSE}
 # Create dataset that describes 20,50,80 percentiles of regents/grads per year
 grad_rates_regents_grads <- grad_rates_clean %>% 
   group_by(cohort_year) %>% 
   nest() %>% 
   mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[10]], probs = .2, na.rm = TRUE)),
          percentile_80 = map_dbl(data,  ~ quantile(.[[10]], probs = .8, na.rm = TRUE)),
-         percentile_50 = map_dbl(data,  ~ quantile(.[[10]], probs = .5, na.rm = TRUE))) %>% 
-  arrange(cohort_year) %>% 
+         percentile_50 = map_dbl(data,  ~ quantile(.[[10]], probs = .5, na.rm = TRUE)),
+         year = cohort_year + 4) %>% 
+  arrange(year) %>% 
   select(-data)
 
 #Graph the median result with errorbars at 80 and 20
 grad_rates_regents_grads %>% 
-  ggplot(aes(x = cohort_year, y = percentile_50)) +
+  ggplot(aes(x = year, y = percentile_50)) +
   geom_point() +
-  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
+  labs(title = "Regent Diploma Rate of Graduates 2005-2015",
+       subtitle = "20, 50, 80 Percentiles",
+       y = "Regent Diploma Rate (Graduates)",
+       x = "School Year as of June") +
+  scale_x_continuous(breaks = c(2005, 2010, 2015),
+                     limits = c(2004, 2016)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
 
 
+```{r Compare AdvRegents/Cohort Quintiles, include = FALSE}
 # Create dataset that describes 20,50,80 percentiles of adv regents/cohort
 grad_rates_advregents_cohort <- grad_rates_clean %>% 
   group_by(cohort_year) %>% 
