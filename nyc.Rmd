@@ -62,8 +62,6 @@ demo_20062012 <- read_csv("raw/enrollmentdata/2006_-_2012_School_Demographics_an
   filter(!is.na(grade9) & !is.na(grade10) & !is.na(grade11) &!is.na(grade12)) %>% 
   mutate(total_hs_enrollment = grade9 + grade10 + grade11 + grade12)
 
-demo_20062012
-
 #Load in 2011-2016 and filter for high schools
 #Schoolyear was in 20xx-xx format so got rid of middle "x-x"
 #Filtered for grades 9-12 that were not 0 count
@@ -940,6 +938,51 @@ data_join %>%
   theme_classic() 
 # Average enrollments have stayed the same, but what about concentrations per school?
 # Current visualizations don't address the issue of segregation between schools.
+
+```
+
+
+```{r check free and reduced lunches, echo = FALSE}
+
+frl <- data_join %>% 
+  select(dbn, fl_or_frl_lunch) %>% 
+  filter(year >= 2006) %>%
+  filter(dbn %in% failing_2005_list) %>%
+  group_by(year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[2]], probs = .2, na.rm = TRUE)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[2]], probs = .8, na.rm = TRUE)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[2]], probs = .5, na.rm = TRUE))) %>% 
+  select(-data) %>% 
+  ggplot(aes(x = year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) 
+
+frl
+
+data_join %>% 
+  select(year, dbn, ccdenrnumfrl) %>% 
+  filter(year == 2005)
+
+
+ppe <- data_join %>% 
+  select(dbn, ppexpotps) %>% 
+  filter(year >= 2005) %>%
+  filter(dbn %in% failing_2005_list) %>%
+  group_by(year) %>% 
+  nest() %>% 
+  mutate(percentile_20 = map_dbl(data,  ~ quantile(.[[2]], probs = .2, na.rm = TRUE)),
+         percentile_80 = map_dbl(data,  ~ quantile(.[[2]], probs = .8, na.rm = TRUE)),
+         percentile_50 = map_dbl(data,  ~ quantile(.[[2]], probs = .5, na.rm = TRUE))) %>% 
+  select(-data) %>% 
+  ggplot(aes(x = year, y = percentile_50)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) 
+
+
+ppe
+
+  
 
 ```
 
