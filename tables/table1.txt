@@ -5,35 +5,28 @@ Title
                     -----------------------------
                     total_grads_percent_of_cohort
 -------------------------------------------------
-total_hs_enrollment           -0.003***          
-                              (0.0004)           
+total_hs_enrollment          -0.0028***          
+                              (0.0006)           
                                                  
-year                           1.21***           
-                               (0.14)            
+black_per                    -1.5031***          
+                              (0.2748)           
                                                  
-black_per                     -1.12***           
-                               (0.19)            
+hispanic_per                 -1.4350***          
+                              (0.2772)           
                                                  
-hispanic_per                  -1.06***           
-                               (0.19)            
+white_per                    -1.1420***          
+                              (0.2739)           
                                                  
-white_per                     -0.77***           
-                               (0.20)            
+asian_per                    -0.9584***          
+                              (0.2750)           
                                                  
-asian_per                     -0.58***           
-                               (0.20)            
-                                                 
-fl_or_frl_lunch                 -0.03            
-                               (0.03)            
-                                                 
-Constant                    -2,254.00***         
-                              (279.30)           
+fl_or_frl_lunch                -0.0150           
+                              (0.0189)           
                                                  
 -------------------------------------------------
 Observations                    3,410            
-R2                              0.23             
-Adjusted R2                     0.23             
-Residual Std. Error       18.53 (df = 3402)      
-F Statistic           143.50*** (df = 7; 3402)   
+R2                             0.2150            
+Adjusted R2                    0.2116            
+F Statistic          154.9603*** (df = 6; 3394)  
 =================================================
 Note:                 *p<0.1; **p<0.05; ***p<0.01

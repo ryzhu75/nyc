@@ -18,6 +18,8 @@ library(gt)
 library(tidymodels)
 library(knitr)
 library(stargazer)
+library(plm)
+library(lmtest)
 ```
 
 ```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
@@ -992,49 +994,110 @@ ppe
 ```
 
 
-```{r Run the Regression, echo = FALSE}
+```{r Observe Data of graduation and enrollment, echo = FALSE}
 
+# All Years
+data_join %>% 
+  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
+  geom_point()
+
+# 2006
 data_join %>% 
   subset(year == 2006) %>% 
   ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
   geom_point()
 
+# 2010
+data_join %>% 
+  subset(year == 2010) %>% 
+  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
+  geom_point()
+
+# 2015
 data_join %>% 
   subset(year == 2015) %>% 
   ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
   geom_point()
 
+```
 
 
-regression <- data_join %>%
+```{r OLS + Time Fixed Effects Regressions: grad percet ~ hs enrollment, echo = FALSE}
+
+# Time fixed effects regression using plm()
+regression_tfe <- data_join %>%
+  ungroup(year) %>% 
+  
+  # Not enough observations pre 2006
   subset(year >= 2006) %>% 
+  
+  # Multiplied decimal fractions by 100 
   mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
          
-         # Create a logged variable of total high school enrollment 
-         log10_total_hs_enrollment = log10(total_hs_enrollment)) %>% 
-  lm(total_grads_percent_of_cohort ~ total_hs_enrollment + year + black_per + hispanic_per + white_per + asian_per + fl_or_frl_lunch, data = .)
+         #Convert year into a factor
+         year = as.factor(year)) %>% 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + black_per + hispanic_per + white_per + asian_per +     fl_or_frl_lunch, 
+      data = .,
+      index = "year",
+      
+      # Indicated a fixed effect regression
+      model = "within")
 
-# Reformatted output tables to not show scientific notation
-options("scipen"=100, "digits"=4)
+# Check for Heteroskedasticity within the Time-Fixed Effects Model
+# Reject Null Hypothesis of homoskedasticity
+bptest(regression_tfe)
 
-# Output regression table
-regression_table <- regression %>% 
-  tidy(conf.int = TRUE) %>% 
-  select(term, estimate, std.error, statistic, p.value) 
+# Store robust standard errors into regression_tfe$robust  \\ Same as adding "r"
+# at the end of regression in STATA
+regression_tfe$robust <- coeftest(regression_tfe, vcovHC(regression_tfe, type = "HC1"))
 
-kable(regression_table)
-
-stargazer(regression,
+# Plot time fixed effect regression
+stargazer(regression_tfe,
+          
+          # Substitute in robust standard errors
+          se = list(regression_tfe$robust[,2]),
           title = "Title",
           header = FALSE,
-          digits = 2,
+          digits = 4,
           out = "tables/table1.txt")
 
 
+## OLS Regression + Time Fixed Effects Regression 
+
+# Create OLS Regression Model 
+regression_ols <- data_join %>%
+  ungroup(year) %>% 
+  
+  # Not enough observations pre-2006
+  subset(year >= 2006) %>% 
+  mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
+         
+         #Convert year into a factor
+         year = as.factor(year)) %>% 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + black_per + hispanic_per + white_per + asian_per + fl_or_frl_lunch, 
+      data = ., 
+      index = "year", 
+      
+      # Indicates OLS model regression
+      model = "pooling")
+
+# Calculate Robust standard errors \\ Same as adding "r" at the end of regression in STATA
+regression_ols$robust <- coeftest(regression_ols, vcovHC(regression_ols, type = "HC1"))
+
+# Plot into a table results of OLS vs. Time Fixed Effects
+stargazer(regression_ols, regression_tfe,
+          
+          # Replaced standard errors with robust standard errors
+          se = list(regression_ols$robust[,2], regression_tfe$robust[,2]),
+          title = "Title",
+          column.labels = c("OLS", "Time Fixed Effects"),
+          digits = 4,
+          out = "tables/table2.txt")
+```
+
+
+```{r, echo = FALSE}
 # Remove transfer schools from analysis?
-# Time fixed effects not done correctly yet
-
-
 
 ```
 
