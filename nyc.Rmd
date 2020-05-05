@@ -15,6 +15,9 @@ library(stringr)
 library(tidyr)
 library(patchwork)
 library(gt)
+library(tidymodels)
+library(knitr)
+library(stargazer)
 ```
 
 ```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
@@ -95,7 +98,10 @@ demo_20062016 <- demo_20062012 %>%
                                   "total_hs_enrollment",
                                   "prek" = "grade_pk",
                                   "k"= "grade_k",
-                                  "grade1" = "grade_1",
+                                  
+                                  # For some reason, grade1 was cl
+                                  
+                                  "grad_e1" = "grade_1",
                                   "grade2" = "grade_2",
                                   "grade3" = "grade_3",
                                   "grade4" = "grade_4",
@@ -123,7 +129,7 @@ demo_20062016 <- demo_20062012 %>%
                                   "frl_percent" = "percent_poverty"
                                   )) %>% 
   mutate(fl_or_frl_lunch = coalesce(frl_percent, fl_percent)) %>% 
-  select(-prek, -k, -grade1, -grade2, -grade3, -grade4, -grade5, -grade6, -grade7, -grade8) %>% 
+  select(-prek, -k, -grad_e1, -grade2, -grade3, -grade4, -grade5, -grade6, -grade7, -grade8) %>% 
   arrange(dbn, schoolyear) 
 
 
@@ -982,9 +988,56 @@ ppe <- data_join %>%
 
 ppe
 
-  
 
 ```
+
+
+```{r Run the Regression, echo = FALSE}
+
+data_join %>% 
+  subset(year == 2006) %>% 
+  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
+  geom_point()
+
+data_join %>% 
+  subset(year == 2015) %>% 
+  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
+  geom_point()
+
+
+
+regression <- data_join %>%
+  subset(year >= 2006) %>% 
+  mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
+         
+         # Create a logged variable of total high school enrollment 
+         log10_total_hs_enrollment = log10(total_hs_enrollment)) %>% 
+  lm(total_grads_percent_of_cohort ~ total_hs_enrollment + year + black_per + hispanic_per + white_per + asian_per + fl_or_frl_lunch, data = .)
+
+# Reformatted output tables to not show scientific notation
+options("scipen"=100, "digits"=4)
+
+# Output regression table
+regression_table <- regression %>% 
+  tidy(conf.int = TRUE) %>% 
+  select(term, estimate, std.error, statistic, p.value) 
+
+kable(regression_table)
+
+stargazer(regression,
+          title = "Title",
+          header = FALSE,
+          digits = 2,
+          out = "tables/table1.txt")
+
+
+# Remove transfer schools from analysis?
+# Time fixed effects not done correctly yet
+
+
+
+```
+
 
 
 
