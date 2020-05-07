@@ -999,7 +999,8 @@ ppe
 # All Years
 data_join %>% 
   ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm")
 
 # 2006
 data_join %>% 
@@ -1036,7 +1037,7 @@ regression_tfe <- data_join %>%
          
          #Convert year into a factor
          year = as.factor(year)) %>% 
-  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + black_per + hispanic_per + white_per + asian_per +     fl_or_frl_lunch, 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + asian_per + black_per + hispanic_per + white_per + fl_or_frl_lunch, 
       data = .,
       index = "year",
       
@@ -1058,6 +1059,14 @@ stargazer(regression_tfe,
           se = list(regression_tfe$robust[,2]),
           title = "Title",
           header = FALSE,
+          dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
+          
+          covariate.labels = c("Total HS Enrollment", 
+                               "% Asian",
+                               "% Black",
+                               "% Hispanic", 
+                               "% White",  
+                               "% Free/Reduced Lunch"),
           digits = 4,
           out = "tables/table1.txt")
 
@@ -1074,7 +1083,7 @@ regression_ols <- data_join %>%
          
          #Convert year into a factor
          year = as.factor(year)) %>% 
-  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + black_per + hispanic_per + white_per + asian_per + fl_or_frl_lunch, 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + asian_per + black_per + hispanic_per + white_per + fl_or_frl_lunch, 
       data = ., 
       index = "year", 
       
@@ -1091,13 +1100,25 @@ stargazer(regression_ols, regression_tfe,
           se = list(regression_ols$robust[,2], regression_tfe$robust[,2]),
           title = "Title",
           column.labels = c("OLS", "Time Fixed Effects"),
+          
+          dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
+          
+          covariate.labels = c("Total HS Enrollment", 
+                               "% Asian",
+                               "% Black",
+                               "% Hispanic", 
+                               "% White",  
+                               "% Free/Reduced Lunch"),
           digits = 4,
           out = "tables/table2.txt")
+
 ```
 
 
 ```{r, echo = FALSE}
 # Remove transfer schools from analysis?
+# Do log?
+
 
 ```
 
