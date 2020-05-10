@@ -510,7 +510,8 @@ failing_2005_large_closed_list <- data_failing_open %>%
 # Data 
 failing_2005_large_open_shrank <- data_failing_open %>% 
   filter(avail2015 == TRUE) %>%
-  mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>%           pull(total_hs_enrollment))) %>% 
+  mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>% 
+                                       pull(total_hs_enrollment))) %>% 
   filter(enrollment_2005 > 600) %>% 
   filter(enrollment_2015 <= 600 | enrollment_2015 <= enrollment_2005/2) %>% 
   unnest()
@@ -526,7 +527,8 @@ failing_2005_large_open_shrank_list <- failing_2005_large_open_shrank %>%
 # Data
 failing_2005_large_open_2015 <- data_failing_open %>% 
   filter(avail2015 == TRUE) %>%
-  mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>%           pull(total_hs_enrollment))) %>% 
+  mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>%           
+                                       pull(total_hs_enrollment))) %>% 
   filter(enrollment_2005 > 600) %>% 
   filter(enrollment_2015 >= 600 & enrollment_2015 >= enrollment_2005/2) %>% 
   unnest()
@@ -569,14 +571,14 @@ replacement_schools_vs_all_failing <- data_join %>%
 replacement_schools_vs_all_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
-  ggplot(aes(x = year, y = avg_grad, color = data_cat)) +
-  geom_point() +
+  ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
+  geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
   labs(title = "Average Graduation Rates from 2005-2015",
        y = "Average Graduation Rate",
        x = "School Year as of June",
        caption ="Values for the treated group in 2006 was omitted due to too few observations \n Values for the 'To Close' group was omitted after 2008 due to too few observations") +
-  scale_color_discrete(name = "", 
+  scale_shape_discrete(name = "", 
                        labels = c("To Close (2005)", 
                                   "Control", 
                                   "Treated Schools"),
@@ -584,9 +586,11 @@ replacement_schools_vs_all_failing %>%
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
    scale_y_continuous(limits = c(0.3, 0.8)) +
    theme_classic() +
-   theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5),
-        plot.caption = element_text(hjust = 0.5, face = "italic"))
+   theme(plot.title = element_text(hjust = 0, face = "bold"),
+         plot.title.position = "plot",
+         plot.subtitle = element_text(hjust = 0),
+         plot.caption = element_text(hjust = 0.5, face = "italic"),
+         text = element_text(family = "Times New Roman"))
 
 
 # Create a table displaying average graduation rates from 05-15, for each school type
@@ -605,7 +609,23 @@ replacement_schools_vs_all_failing %>%
               "Announced for Closure in 2005" = "To Close (2005)",
               "Small Replacement Schools opened by 2005" = "Small Replacement") %>% 
   cols_align(align = "center", columns = 1:4) %>% 
-  fmt_number(columns = 2:4, decimals = 2) 
+  fmt_number(columns = 2:4, decimals = 2)  %>% 
+    
+  tab_style(style = cell_text(font = "Times New Roman"), 
+            locations = list(cells_column_labels(columns = TRUE),
+                          cells_body(), 
+                          cells_title(), 
+                          cells_column_spanners(spanners = "Graduation Rates")
+                          ) 
+            ) %>% 
+  
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_title()) %>% 
+  tab_options(table.width = px(650),
+              heading.align = "left",
+              heading.border.bottom.style = "hidden",
+              heading.title.font.size = 16
+              ) 
 
 ```
 
@@ -651,13 +671,13 @@ replacement_schools_grad_vs_failing %>%
 replacement_schools_grad_vs_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm = TRUE)) %>% 
-  ggplot(aes(x = year, y = avg_grad, color = data_cat)) +
-  geom_point() +
+  ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
+  geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
   labs(title = "Average Graduation Rates from 2005-2015",
        y = "Average Graduation Rate",
        x = "School Year as of June") +
-  scale_color_discrete(name = "",
+  scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
                                   "Announced for Closure in 2005",
                                   "Large and Operating",
@@ -670,7 +690,12 @@ replacement_schools_grad_vs_failing %>%
                                   "Control: Closed")) +
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
    scale_y_continuous(limits = c(0.3, 0.8)) +
-   theme_classic()
+   theme_classic() +
+   theme(plot.title = element_text(hjust = 0, face = "bold"),
+         plot.title.position = "plot",
+         plot.subtitle = element_text(hjust = 0),
+         plot.caption = element_text(hjust = 0.5, face = "italic"),
+         text = element_text(family = "Times New Roman"))
 
 # Create a table displaying average graduation rates from 05-15, for each school type
 replacement_schools_grad_vs_failing %>% 
@@ -695,7 +720,24 @@ replacement_schools_grad_vs_failing %>%
              "Small Replacement Schools opened by 2005" = "Treatment",
               "Announced for Closure in 2005" = "To Close (2005)") %>% 
   cols_align(align = "center", columns = 1:6) %>% 
-  fmt_number(columns = 2:6, decimals = 2) 
+  fmt_number(columns = 2:6, decimals = 2)  %>% 
+  tab_style(style = cell_text(font = "Times New Roman"), 
+            locations = list(cells_column_labels(columns = TRUE),
+                          cells_body(), 
+                          cells_title(), 
+                          cells_column_spanners(spanners = "Control")
+                          ) 
+            ) %>% 
+  
+  # Format table to have times new roman font and align heading
+  
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_title()) %>% 
+  tab_options(table.width = px(650),
+              heading.align = "left",
+              heading.border.bottom.style = "hidden",
+              heading.title.font.size = 16
+              ) 
 
 replacement_schools_grad_vs_failing %>% 
   filter(data_cat == "Small Replacement Schools opened by 2005",
@@ -707,13 +749,13 @@ replacement_schools_grad_vs_failing %>%
 replacement_schools_grad_vs_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_hs_enrollment = mean(total_hs_enrollment, na.rm =TRUE)) %>% 
-  ggplot(aes(x = year, y = avg_hs_enrollment, color = data_cat)) +
-  geom_point() +
+  ggplot(aes(x = year, y = avg_hs_enrollment, shape = data_cat)) +
+  geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
   labs(title = "Average HS Enrollment from 2005-2015",
        y = "Average HS Enrollment",
        x = "School Year as of June") +
-  scale_color_discrete(name = "",
+  scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
                                   "Announced for Closure in 2005",
                                   "Large and Operating",
@@ -726,8 +768,11 @@ replacement_schools_grad_vs_failing %>%
                                   "Control: Closed")) +
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
    theme_classic() +
-   theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5))
+   theme(plot.title = element_text(hjust = 0, face = "bold"),
+         plot.title.position = "plot",
+         plot.subtitle = element_text(hjust = 0),
+         plot.caption = element_text(hjust = 0.5, face = "italic"),
+         text = element_text(family = "Times New Roman"))
 
 
 data_join %>% 
@@ -770,7 +815,7 @@ grad_rates_nest %>%
         text = element_text(family = "Times New Roman"))
 
 ## Chart with changes in graduation rates from 2005-2015 incl. pp and per change
-grad_rates_table <- grad_rates_nest %>% 
+grad_rates_nest %>% 
   filter(year == 2005 |
          year == 2015) %>% 
   pivot_longer(cols = starts_with("percentile_"), names_to = "percentile", values_to = "graduation_rate") %>% 
@@ -812,9 +857,9 @@ grad_rates_table <- grad_rates_nest %>%
               heading.border.bottom.style = "hidden",
               heading.title.font.size = 16
               ) 
-
-grad_rates_table %>% 
-  gtsave("hs_grad_rates_overview.html", path = "~/Documents/EC 980B/final_project/nyc/tables")
+# 
+# grad_rates_table %>% 
+#   gtsave("hs_grad_rates_overview.html", path = "~/Documents/EC 980B/final_project/nyc/tables")
 
 
 ```
