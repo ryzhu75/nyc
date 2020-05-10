@@ -20,6 +20,10 @@ library(knitr)
 library(stargazer)
 library(plm)
 library(lmtest)
+library(extrafont)
+library(devtools)
+library(ggplot2)
+
 ```
 
 ```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
@@ -147,7 +151,6 @@ demo_20062016 <- demo_20062012 %>%
 
 ```
 
-
 ```{r Graduation Rates Cutoff Comparison, include = FALSE}
 
 # Filter for high schools (defined as schools serving 9-12 at least)  
@@ -183,7 +186,6 @@ data %>%
   count()
 
 ```
-
 
 ```{r grad_rates_clean (From grad rates 2005-2010), include = FALSE}
 #Load in 2005-15 graduation rate data and clean variable names
@@ -250,7 +252,6 @@ data_join <- data_hs %>%
  # arrange(dbn, year) %>% 
  # mutate(total_hs_enrollment = coalesce(total_hs_enrollment, as.double(total_hs_enrollment_schnam)))
 ```
-
 
 ```{r 2005 Replaced and Replacement Schools, include = FALSE}
 
@@ -401,8 +402,7 @@ failing_2005_list <- data_failing_open %>%
   
 ```
 
-
-```{r Visualizing change in new york city high school composition by size, echo = FALSE}
+```{r Visualizing change in new york city high school sizes, echo = FALSE}
 
 # All public school data
 
@@ -444,9 +444,28 @@ data_join %>%
        y = "% of Total High Schools",
        x = "Total High School Enrollment")
 
+# Plot number of high schools with enrollment less than 600 from 2000-2015
+
+data_join %>% 
+  unnest() %>% 
+  # ungroup(year) %>% 
+  filter(total_hs_enrollment <= 600,
+         year >= 2000) %>% 
+  count() %>% 
+  ggplot(aes(x = year, y = n)) +
+  geom_col()+ 
+  labs(title = "Number of High Schools with Enrollment ≤ 600 from 2005-2015") +
+  scale_y_continuous(name = "# High Schools",
+                     limits = c(0, 500)) +
+  scale_x_continuous(name = "School Year (As of June)") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        text = element_text(family = "Times New Roman"))
+
+
 ```
-
-
 
 ```{r Small Failing Closed Open in 2005, include = FALSE}
 
@@ -590,7 +609,6 @@ replacement_schools_vs_all_failing %>%
 
 ```
 
-
 ```{r Compare Replacement Schools with Large Failing Open Schools in 2005 sorted by large failing open schools outcomes, echo = FALSE}
 # Plot a line graph showing the relationship between year and graduation rates
 # per type of school
@@ -684,7 +702,6 @@ replacement_schools_grad_vs_failing %>%
          year != 2016)
 ```
 
-
 ```{r Enrollment numbers by school category, echo = FALSE}
 # Plot average enrollment sizes by category across years
 replacement_schools_grad_vs_failing %>% 
@@ -718,10 +735,8 @@ data_join %>%
   select(dbn, school, total_grads_percent_of_cohort, hsonumcohtot, hsonumcohnyc, hsonumhsgtot)
 ```
 
-
 ```{r Compare Replacement Schools with Large Failing Open Schools in 2005 sorted by large failing open schools outcomes, echo = FALSE}
 ```
-
 
 ```{r Compare Graduation Quintiles, echo = FALSE}
 
@@ -741,7 +756,7 @@ grad_rates_nest %>%
   ggplot(aes(x = year, y = percentile_50)) +
   geom_point() +
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
-  labs(title = "HS Graduation Rates 2005-2015",
+  labs(title = "Highschool Graduation Rates 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
        y = "Graduation Rate",
        x = "School Year as of June") +
@@ -749,11 +764,13 @@ grad_rates_nest %>%
                      limits = c(2004, 2016)) +
   scale_y_continuous(limits = c(.3, 1)) +
   theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        text = element_text(family = "Times New Roman"))
 
 ## Chart with changes in graduation rates from 2005-2015 incl. pp and per change
-grad_rates_nest %>% 
+grad_rates_table <- grad_rates_nest %>% 
   filter(year == 2005 |
          year == 2015) %>% 
   pivot_longer(cols = starts_with("percentile_"), names_to = "percentile", values_to = "graduation_rate") %>% 
@@ -773,8 +790,31 @@ grad_rates_nest %>%
              percent_change = "%") %>% 
   tab_spanner(label = "Graduation Rates", columns = 2:3) %>% 
   tab_spanner(label = "Change", columns = 4:5) %>% 
-  tab_header(title= "High School Graduation Rates 2005-2015")
+  tab_header(title= "High School Graduation Rates 2005-2015") %>% 
+  cols_align(align = "center", columns = TRUE) %>% 
   
+  # A clunky way of formatting all text to Times New Roman but couldn't find any 
+  # other way within the gt package
+  
+  tab_style(style = cell_text(font = "Times New Roman"), 
+            locations = list(cells_column_labels(columns = 1:5),
+                          cells_body(), 
+                          cells_title(), 
+                          cells_column_spanners(spanners = c("Graduation Rates", 
+                                                             "Change"))
+                          ) 
+            ) %>% 
+  
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_title()) %>% 
+  tab_options(table.width = px(650),
+              heading.align = "left",
+              heading.border.bottom.style = "hidden",
+              heading.title.font.size = 16
+              ) 
+
+grad_rates_table %>% 
+  gtsave("hs_grad_rates_overview.html", path = "~/Documents/EC 980B/final_project/nyc/tables")
 
 
 ```
@@ -804,10 +844,11 @@ grad_rates_regents_cohort %>%
                      limits = c(2004, 2016)) +
   scale_y_continuous(limits = c(0, 1)) +
   theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        text = element_text(family = "Times New Roman"))
 ```
-
 
 ```{r Compare Regents per Graduates Quintiles, include = FALSE}
 # Create dataset that describes 20,50,80 percentiles of regents/grads per year
@@ -838,7 +879,6 @@ grad_rates_regents_grads %>%
         plot.subtitle = element_text(hjust = 0.5))
 ```
 
-
 ```{r Compare AdvRegents/Cohort Quintiles, include = FALSE}
 # Create dataset that describes 20,50,80 percentiles of adv regents/cohort
 grad_rates_advregents_cohort <- grad_rates_clean %>% 
@@ -857,11 +897,9 @@ grad_rates_advregents_cohort %>%
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
 ```
 
-
 ```{r join data_join with 2005-2016 }
 
 ```
-
 
 ```{r Comparing Demographic Data of Closed Schools pre-05 and replacement schools post-05, echo = FALSE}
 
@@ -878,16 +916,23 @@ demo_closed05_20002005_plot <- data_join %>%
   group_by(year, demographic) %>% 
   summarize(avg_per = mean(percent, na.rm = TRUE)) %>% 
   # Must use pivot longer on demo_per observations
-  ggplot(aes(x = year, y = avg_per, color = demographic)) +
+  ggplot(aes(x = year, y = avg_per, shape = demographic)) +
   geom_line() +
+  geom_point(aes(shape = demographic), size = 2) +
   scale_x_continuous(limits = c(2002,2005),
                      breaks = c(2002,2005)) +
   ylim(0, .6) +
   theme_classic() +
-   theme(legend.position = "none") +
-  labs(subtitle = "Schools to Close",
+  labs(title = "Demographics of Pre + Post Treatment",
+       subtitle = "Schools to Close",
        y = "Fraction of High School Enrollment",
-       x = "School Year as of June")
+       x = "School Year as of June") +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0.2),
+        text = element_text(family = "Times New Roman"),
+        axis.title.x = element_text(hjust = 1)) 
 
 # Track racial demographic changes in replacement schools from 05-15
 demo_replacement05_20062015_plot <- data_join %>% 
@@ -897,20 +942,28 @@ demo_replacement05_20062015_plot <- data_join %>%
   group_by(year, demographic) %>% 
   summarize(avg_per = mean(percent/100, na.rm = TRUE)) %>% 
   # Must use pivot longer on demo_per observations
-  ggplot(aes(x = year, y = avg_per, color = demographic)) +
+  ggplot(aes(x = year, y = avg_per, shape = demographic)) +
   geom_line() +
+  geom_point(aes(shape = demographic), size = 2) +
   labs(subtitle = "Replacement Schools",
         x = "") +
   scale_x_continuous(limits = c(2006, 2009), breaks = c(2006, 2009)) +
   ylim(0, .6) +
-  scale_color_discrete(name = "Race", labels = c("Asian", "Black", "Hispanic", "White")) +
+  scale_shape_discrete(name = "Race", labels = c("Asian", "Black", "Hispanic", "White")) +
   theme_classic() +
   theme(axis.text.y = element_blank(),
         axis.line.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title.y = element_blank()) 
-  
+        axis.title.y = element_blank(),
+        plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        text = element_text(family = "Times New Roman"))
+
+# Combine above two plots to compare school and repelacement schools 
+
 demo_closed05_20002005_plot + demo_replacement05_20062015_plot
+  
 
 
 
@@ -948,7 +1001,6 @@ data_join %>%
 # Current visualizations don't address the issue of segregation between schools.
 
 ```
-
 
 ```{r check free and reduced lunches, echo = FALSE}
 
@@ -993,7 +1045,6 @@ ppe
 
 ```
 
-
 ```{r Observe Data of graduation and enrollment, echo = FALSE}
 
 # All Years
@@ -1022,8 +1073,7 @@ data_join %>%
 
 ```
 
-
-```{r OLS + Time Fixed Effects Regressions: grad percet ~ hs enrollment, echo = FALSE}
+```{r OLS + Time Fixed Effects Regressions: Entire Population, echo = FALSE}
 
 # Time fixed effects regression using plm()
 regression_tfe <- data_join %>%
@@ -1068,7 +1118,7 @@ stargazer(regression_tfe,
                                "% White",  
                                "% Free/Reduced Lunch"),
           digits = 4,
-          out = "tables/table1.txt")
+          out = "tables/table1.html")
 
 
 ## OLS Regression + Time Fixed Effects Regression 
@@ -1110,15 +1160,132 @@ stargazer(regression_ols, regression_tfe,
                                "% White",  
                                "% Free/Reduced Lunch"),
           digits = 4,
-          out = "tables/table2.txt")
+          out = "tables/table2.html")
 
 ```
 
+```{r OLS + Time Fixed Effects Regressions: Experiment Population, echo = FALSE}
+
+
+# Time fixed effects regression using plm()
+regression_tfe_exp <- data_join %>%
+  ungroup(year) %>% 
+  
+  # Not enough observations pre 2006
+  subset(year >= 2006) %>% 
+  
+  # Filter for schools that are in the experiment population
+  # Schools failing in 2005 but not closed
+  filter(dbn %in% failing_2005_list | 
+           
+         # Schools failing in 2005 announced for closure 
+         dbn %in% large_failing_schools |
+           
+          # Schools that would replace closed failed schools 
+         dbn %in% replacement_schools) %>% 
+  
+  # Multiplied decimal fractions by 100 
+  mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
+         
+         #Convert year into a factor
+         year = as.factor(year)) %>% 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + asian_per + black_per + hispanic_per + white_per + fl_or_frl_lunch, 
+      data = .,
+      index = "year",
+      
+      # Indicated a fixed effect regression
+      model = "within")
+
+# Check for Heteroskedasticity within the Time-Fixed Effects Model
+# Reject Null Hypothesis of homoskedasticity
+bptest(regression_tfe_exp)
+
+# Store robust standard errors into regression_tfe$robust  \\ Same as adding "r"
+# at the end of regression in STATA
+regression_tfe_exp$robust <- coeftest(regression_tfe_exp, vcovHC(regression_tfe_exp, type = "HC1"))
+
+# Plot time fixed effect regression
+stargazer(regression_tfe_exp,
+          
+          # Substitute in robust standard errors
+          se = list(regression_tfe_exp$robust[,2]),
+          title = "Title",
+          header = FALSE,
+          dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
+          
+          covariate.labels = c("Total HS Enrollment", 
+                               "% Asian",
+                               "% Black",
+                               "% Hispanic", 
+                               "% White",  
+                               "% Free/Reduced Lunch"),
+          digits = 4,
+          out = "tables/table3.html")
+
+
+## OLS Regression + Time Fixed Effects Regression 
+
+# Create OLS Regression Model 
+regression_ols_exp <- data_join %>%
+  ungroup(year) %>% 
+  
+  # Not enough observations pre-2006
+  subset(year >= 2006) %>% 
+  
+  # Filter for experiment population
+  filter(dbn %in% failing_2005_list | 
+         
+       # Schools failing in 2005 announced for closure 
+       dbn %in% large_failing_schools |
+         
+        # Schools that would replace closed failed schools 
+       dbn %in% replacement_schools) %>% 
+  
+  mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
+         
+         #Convert year into a factor
+         year = as.factor(year)) %>% 
+  plm(total_grads_percent_of_cohort ~ total_hs_enrollment + asian_per + black_per + hispanic_per + white_per + fl_or_frl_lunch, 
+      data = ., 
+      index = "year", 
+      
+      # Indicates OLS model regression
+      model = "pooling")
+
+# Calculate Robust standard errors \\ Same as adding "r" at the end of regression in STATA
+regression_ols_exp$robust <- coeftest(regression_ols_exp, vcovHC(regression_ols_exp, type = "HC1"))
+
+# Plot into a table results of OLS vs. Time Fixed Effects
+stargazer(regression_ols_exp, regression_tfe_exp,
+          
+          # Replaced standard errors with robust standard errors
+          se = list(regression_ols_exp$robust[,2], regression_tfe_exp$robust[,2]),
+          title = "Title",
+          column.labels = c("OLS", "Time Fixed Effects"),
+          
+          dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
+          
+          covariate.labels = c("Total HS Enrollment", 
+                               "% Asian",
+                               "% Black",
+                               "% Hispanic", 
+                               "% White",  
+                               "% Free/Reduced Lunch"),
+          digits = 4,
+          out = "tables/table4.html")
+
+
+
+```
 
 ```{r, echo = FALSE}
 # Remove transfer schools from analysis?
-# Do log?
 
+data_join %>% 
+  filter(dbn %in%  replacement_schools) %>% 
+  filter(dbn == "02M565") %>% 
+  # filter(lcgschtyp == "TRANSFER SCHOOL") %>% 
+  select(schnam, dbn, year, lcgschtyp)
 
 ```
 
