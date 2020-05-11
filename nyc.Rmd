@@ -23,7 +23,6 @@ library(lmtest)
 library(extrafont)
 library(devtools)
 library(ggplot2)
-
 ```
 
 ```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
@@ -803,8 +802,6 @@ data_join %>%
   select(dbn, school, total_grads_percent_of_cohort, hsonumcohtot, hsonumcohnyc, hsonumhsgtot)
 ```
 
-```{r Compare Replacement Schools with Large Failing Open Schools in 2005 sorted by large failing open schools outcomes, echo = FALSE}
-```
 
 ```{r Compare Graduation Quintiles, echo = FALSE}
 
@@ -1172,7 +1169,7 @@ ppe
 
 ```
 
-```{r % Poverty for Treatment and Control Groups, echo = FALSE}
+```{r Percent Poverty for Treatment and Control Groups, echo = FALSE}
 # Graphing poverty rates for treatment/control/pretreatment groups from '06-'15
 
 # Prepare the data to be graphed
@@ -1225,7 +1222,7 @@ poverty_exp %>%
 ```
 
 
-```{r % Poverty for Treatment and Control Groups Broken down into Closed, Shrank, Open, echo = FALSE}
+```{r Poverty for Treatment and Control Groups Broken down into Closed Shrank Open, echo = FALSE}
 
 ## Graphing treatment and control poverty rates from '06-'15 
 ## // control group broken down further
