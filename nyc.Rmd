@@ -45,15 +45,6 @@ schools <- data %>%
   distinct(schnam) %>% 
   arrange(schnam)
 
-# Create a list of NYC's specialized schools
-
-selective_schools <- c("BRONX HIGH SCHOOL OF SCIENCE", "BROOKLYN TECHNICAL HIGH SCHOOL", "STATEN ISLAND TECHNICAL HS", "STUYVESANT HIGH SCHOOL", "BROOKLYN LATIN, THE", "QUEENS HIGH SCHOOL FOR THE SCIENCES AT YORK COLLEG", "HIGH SCHOOL FOR MATHEMATICS, SCIENCE AND ENGINEERI", "HIGH SCHOOL OF AMERICAN STUDIES AT LEHMAN COLLEGE")
-
-# Create a dataset that filters out observations for selective schools
-
-data_selective_schools <- data %>% 
-  filter(schnam %in% selective_schools)
-
 ```
 
 ```{r Load in and clean enrollment data 2006-2015, include = FALSE}
@@ -167,14 +158,6 @@ data_hs %>%
   select(schnam, year, hsopcthsgtot) %>% 
   ggplot(aes(x = year, y = hsopcthsgtot, color = schnam)) + 
   geom_jitter() +
-  theme(legend.position = "none")
-
-# Plot percentile rank of school over time
-
-data_hs %>% 
-  filter(schnam %in% selective_schools) %>% 
-  ggplot(aes(x= year, y = percent_rank, color = schnam)) +
-  geom_line() +
   theme(legend.position = "none")
 
 # Find out valid observations of graduation rates per year
@@ -316,6 +299,8 @@ grad_rates_clean %>%
 # Seems like total_grads_percent_of_cohort is more in line with hsopcthsgnyc
 # Almost all schools have observations from 2005- we'll use that as a starting point
   
+
+
 graduation_rates_failing_closed_joined <- data_join %>% 
   filter(dbn %in% old_new_schools$old_dbn) %>% 
   select(dbn, school, year, total_grads_percent_of_cohort, hsopcthsgtot) %>% 
@@ -350,6 +335,9 @@ closed_90_grad <- close_school_2005_graduation_rates %>%
 # 10th percentile :0.2389633206
 # 50th percentile: 0.3885992
 # 90th percentile: 0.46599
+
+# Find the list of schools that had failing graduation rates but were not announced
+# to be closed in 2005
 
 data_failing_open <- data_join %>% 
   
@@ -457,7 +445,7 @@ data_join %>%
   labs(title = "Number of High Schools with Enrollment ≤ 600 from 2005-2015") +
   scale_y_continuous(name = "# High Schools",
                      limits = c(0, 500)) +
-  scale_x_continuous(name = "School Year (As of June)") +
+  scale_x_continuous(name = "School Year (aA second trend resulting from the aggressive small schools policy is a decrease in the number of large high schools and a significant increase in the number of small schools. [HS600 FIG] shows the magnitude and speed at which this policy was implemented. The number of schools with enrollment fewer than or equal to 600 rises dramatically after the 2004-2005 school year until the mid 2010s. This points to a strong correlation between an increasing number of small schools and rising graduation outcomes. s of June)") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
@@ -487,33 +475,63 @@ data_failing_2005_small
 
 ```{r Large Failing Open in 2005, include = FALSE}
 
-# Filter for all large schools that were open in 2005
+# Enrollment metrics of the schools that closed down
+
+data_join %>% 
+  
+  # Filter for schools that closed down 
+  filter(dbn %in% large_failing_schools) %>% 
+  
+  
+  #large_failing_schools 
+  
+  # Filter for 2005 year
+  filter(year == 2003) %>% 
+  
+  select(dbn, schnam, school, total_hs_enrollment) %>%
+  summarize(percentile_25 = quantile(as.numeric(total_hs_enrollment),
+                                     probs = 0.25,
+                                     na.rm = TRUE),
+            percentile_90 = quantile(as.numeric(total_hs_enrollment),
+                                     probs = 0.90,
+                                     na.rm = TRUE),
+            percentile_50 = quantile(as.numeric(total_hs_enrollment),
+                                     probs = 0.5,
+                                     na.rm = TRUE))
+
+# 25 Percnetile: 1307.5
+# 50 Percentiile: 1603
+
+  
+# Filter for all large schools that were open in 2005 (>1300 enrollment)
 failing_2005_large_list <- data_failing_open %>% 
-  filter(enrollment_2005 > 600) %>% 
+  filter(enrollment_2005 > 1300) %>% 
   pull(dbn)
 
 ## Failing Large Schools in 2005 that were open and eventually closed
 # Data 
 failing_2005_large_closed <- data_failing_open %>% 
-  filter(enrollment_2005 > 600) %>% 
+  filter(enrollment_2005 > 1300) %>% 
   filter(avail2015 == FALSE) %>% 
   unnest()
 
 # dbn pull
 failing_2005_large_closed_list <- data_failing_open %>% 
-  filter(enrollment_2005 > 600) %>% 
+  filter(enrollment_2005 > 1300) %>% 
   filter(avail2015 == FALSE) %>% 
   pull(dbn)
   
 
-# Data for failing large schools in 2005 that were and are still open but shrank
+# Data for failing large schools in 2005 that were and are still open but shrank #(as defined as maintaining at less than 50% of its original enrollment in 2005
+# and having enrollment at below 600)
+
 # Data 
 failing_2005_large_open_shrank <- data_failing_open %>% 
   filter(avail2015 == TRUE) %>%
   mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>% 
                                        pull(total_hs_enrollment))) %>% 
-  filter(enrollment_2005 > 600) %>% 
-  filter(enrollment_2015 <= 600 | enrollment_2015 <= enrollment_2005/2) %>% 
+  filter(enrollment_2005 > 1300) %>% 
+  filter(enrollment_2015 <= 600 & enrollment_2015 <= enrollment_2005/2) %>% 
   unnest()
 
 # dbn pull
@@ -524,12 +542,13 @@ failing_2005_large_open_shrank_list <- failing_2005_large_open_shrank %>%
 
 
 # Data for failing large schools in 2005 that are still open and maintain size
-# Data
+# (as defined as maintaining at more than than 50% of its original enrollment in 2005
+# and having enrollment above 600)
 failing_2005_large_open_2015 <- data_failing_open %>% 
   filter(avail2015 == TRUE) %>%
   mutate("enrollment_2015" = map_dbl(data, ~filter(., year == 2015) %>%           
                                        pull(total_hs_enrollment))) %>% 
-  filter(enrollment_2005 > 600) %>% 
+  filter(enrollment_2005 > 1300) %>% 
   filter(enrollment_2015 >= 600 & enrollment_2015 >= enrollment_2005/2) %>% 
   unnest()
 
@@ -543,9 +562,10 @@ failing_2005_large_open_2015_list <- failing_2005_large_open_2015 %>%
 
 ```{r Compare closed, replacement schools with Large Failing Open Schools in 2005 , echo = TRUE}
 
-## Data for all large schools (>600) schools with graduation rates in the middle
-## 80th percentile
-## not yet announced for closure as of November 2005
+## Data for all large schools (>1300 enrollment) schools, not yet announced for 
+##  closure as of 2005,  with graduation rates in the middle
+## 80th percentile of schools to be closed
+
 replacement_schools_vs_all_failing <- data_join %>% 
   filter(dbn %in% replacement_schools |
          dbn %in% large_failing_schools |
@@ -576,12 +596,12 @@ replacement_schools_vs_all_failing %>%
   geom_line() +
   labs(title = "Average Graduation Rates from 2005-2015",
        y = "Average Graduation Rate",
-       x = "School Year as of June",
-       caption ="Values for the treated group in 2006 was omitted due to too few observations \n Values for the 'To Close' group was omitted after 2008 due to too few observations") +
+       x = "School Year (as of June)",
+       caption ="Values for the treated group in 2006 was omitted due to too few observations \n Values for the pretreatment group was omitted after 2008 due to too few observations") +
   scale_shape_discrete(name = "", 
-                       labels = c("To Close (2005)", 
+                       labels = c("Preatment", 
                                   "Control", 
-                                  "Treated Schools"),
+                                  "Treatment"),
                        guide = guide_legend(reverse = TRUE)) +
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
    scale_y_continuous(limits = c(0.3, 0.8)) +
@@ -604,10 +624,10 @@ replacement_schools_vs_all_failing %>%
   gt() %>% 
   tab_header(title = "Average Graduation Rates from 2005-2015") %>% 
   tab_spanner(label = "Graduation Rates", columns = 2:4) %>% 
-  cols_label( "year" = "School Year (As of June)",
+  cols_label( "year" = "School Year (as of June)",
               "Failing Open Schools in 2005" = "Control Group",
-              "Announced for Closure in 2005" = "To Close (2005)",
-              "Small Replacement Schools opened by 2005" = "Small Replacement") %>% 
+              "Announced for Closure in 2005" = "Pretreatment",
+              "Small Replacement Schools opened by 2005" = "Treatment") %>% 
   cols_align(align = "center", columns = 1:4) %>% 
   fmt_number(columns = 2:4, decimals = 2)  %>% 
     
@@ -676,7 +696,7 @@ replacement_schools_grad_vs_failing %>%
   geom_line() +
   labs(title = "Average Graduation Rates from 2005-2015",
        y = "Average Graduation Rate",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
                                   "Announced for Closure in 2005",
@@ -684,7 +704,7 @@ replacement_schools_grad_vs_failing %>%
                                   "Large and Shrank",
                                   "Large Eventually Closed"), 
                        labels = c("Treatment", 
-                                  "To Close (2005)", 
+                                  "Pretreatment", 
                                   "Control: Open",
                                   "Control: Shrank",
                                   "Control: Closed")) +
@@ -713,12 +733,12 @@ replacement_schools_grad_vs_failing %>%
   gt() %>% 
   tab_header(title = "Average Graduation Rates from 2005-2015") %>% 
   tab_spanner(label = "Control", columns = 2:4) %>% 
-  cols_label(year = "School Year (As of June)", 
+  cols_label(year = "School Year (as of June)", 
              "Large and Operating" = "Open",
              "Large and Shrank" = "Shrank",
              "Large Eventually Closed" = "Closed",
              "Small Replacement Schools opened by 2005" = "Treatment",
-              "Announced for Closure in 2005" = "To Close (2005)") %>% 
+              "Announced for Closure in 2005" = "Pretreatment") %>% 
   cols_align(align = "center", columns = 1:6) %>% 
   fmt_number(columns = 2:6, decimals = 2)  %>% 
   tab_style(style = cell_text(font = "Times New Roman"), 
@@ -754,7 +774,7 @@ replacement_schools_grad_vs_failing %>%
   geom_line() +
   labs(title = "Average HS Enrollment from 2005-2015",
        y = "Average HS Enrollment",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
                                   "Announced for Closure in 2005",
@@ -762,7 +782,7 @@ replacement_schools_grad_vs_failing %>%
                                   "Large and Shrank",
                                   "Large Eventually Closed"), 
                        labels = c("Treated Schools", 
-                                  "To Close (2005", 
+                                  "Pretreatment", 
                                   "Control: Open",
                                   "Control: Shrank",
                                   "Control: Closed")) +
@@ -801,10 +821,10 @@ grad_rates_nest %>%
   ggplot(aes(x = year, y = percentile_50)) +
   geom_point() +
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
-  labs(title = "Highschool Graduation Rates 2005-2015",
+  labs(title = "High School Graduation Rates 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
        y = "Graduation Rate",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
                      limits = c(2004, 2016)) +
   scale_y_continuous(limits = c(.3, 1)) +
@@ -884,7 +904,7 @@ grad_rates_regents_cohort %>%
   labs(title = "Regent Diploma Rate per Cohort 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
        y = "Regent Diploma Rate (Cohort)",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
                      limits = c(2004, 2016)) +
   scale_y_continuous(limits = c(0, 1)) +
@@ -893,6 +913,53 @@ grad_rates_regents_cohort %>%
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
         text = element_text(family = "Times New Roman"))
+
+# Create a table for regents diploma
+
+grad_rates_regents_cohort %>% 
+  filter(year == 2005 |
+         year == 2015) %>% 
+  ungroup(cohort_year) %>% 
+  select(year, percentile_20, percentile_80, percentile_50) %>% 
+  pivot_longer(cols = starts_with("percentile_"), names_to = "percentile", values_to = "regents_rate") %>% 
+  pivot_wider(names_from = "year", values_from = "regents_rate") %>% 
+  mutate("percent_point_change" = ((.[[3]] - .[[2]])*100),
+         "percent_change" = (.[[3]] - .[[2]])/.[[2]]*100,
+         "percentile" = ifelse(percentile == "percentile_20", 
+                               "20th",
+                               ifelse(percentile == "percentile_80",
+                                      "80th",
+                                      "50th"))) %>% 
+  arrange(desc(percentile)) %>% 
+  gt() %>% 
+  fmt_number(columns = 2:5) %>% 
+  cols_label(percentile = "Percentile" ,
+             percent_point_change = "PP",
+             percent_change = "%") %>% 
+  tab_spanner(label = "Regents Diploma Rate", columns = 2:3) %>% 
+  tab_spanner(label = "Change", columns = 4:5) %>% 
+  tab_header(title = "Regents Diploma Rate per Cohort 2005-2015") %>% 
+  cols_align(align = "center", columns = TRUE) %>% 
+  
+  # A clunky way of formatting all text to Times New Roman but couldn't find any 
+  # other way within the gt package
+  
+  tab_style(style = cell_text(font = "Times New Roman"), 
+            locations = list(cells_column_labels(columns = 1:5),
+                          cells_body(), 
+                          cells_title(), 
+                          cells_column_spanners(spanners = c("Regents Diploma Rate", 
+                                                             "Change"))
+                          ) 
+            ) %>% 
+  
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_title()) %>% 
+  tab_options(table.width = px(650),
+              heading.align = "left",
+              heading.border.bottom.style = "hidden",
+              heading.title.font.size = 16
+              ) 
 ```
 
 ```{r Compare Regents per Graduates Quintiles, include = FALSE}
@@ -915,7 +982,7 @@ grad_rates_regents_grads %>%
   labs(title = "Regent Diploma Rate of Graduates 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
        y = "Regent Diploma Rate (Graduates)",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
                      limits = c(2004, 2016)) +
   scale_y_continuous(limits = c(0, 1)) +
@@ -969,9 +1036,9 @@ demo_closed05_20002005_plot <- data_join %>%
   ylim(0, .6) +
   theme_classic() +
   labs(title = "Demographics of Pre + Post Treatment",
-       subtitle = "Schools to Close",
+       subtitle = "Preatment",
        y = "Fraction of High School Enrollment",
-       x = "School Year as of June") +
+       x = "School Year (as of June)") +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
@@ -990,7 +1057,7 @@ demo_replacement05_20062015_plot <- data_join %>%
   ggplot(aes(x = year, y = avg_per, shape = demographic)) +
   geom_line() +
   geom_point(aes(shape = demographic), size = 2) +
-  labs(subtitle = "Replacement Schools",
+  labs(subtitle = "Post treatment",
         x = "") +
   scale_x_continuous(limits = c(2006, 2009), breaks = c(2006, 2009)) +
   ylim(0, .6) +
@@ -1152,7 +1219,7 @@ stargazer(regression_tfe,
           
           # Substitute in robust standard errors
           se = list(regression_tfe$robust[,2]),
-          title = "Title",
+          title = "Regression Analysis: Total HS Enrollment and Graduation Rate",
           header = FALSE,
           dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
           
