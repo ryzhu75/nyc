@@ -442,15 +442,18 @@ data_join %>%
   count() %>% 
   ggplot(aes(x = year, y = n)) +
   geom_col()+ 
-  labs(title = "Number of High Schools with Enrollment ≤ 600 from 2005-2015") +
+  labs(title = "Number of High Schools with Enrollment ≤ 600 2000-2015",
+       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016)"))) +
   scale_y_continuous(name = "# High Schools",
                      limits = c(0, 500)) +
-  scale_x_continuous(name = "School Year (aA second trend resulting from the aggressive small schools policy is a decrease in the number of large high schools and a significant increase in the number of small schools. [HS600 FIG] shows the magnitude and speed at which this policy was implemented. The number of schools with enrollment fewer than or equal to 600 rises dramatically after the 2004-2005 school year until the mid 2010s. This points to a strong correlation between an increasing number of small schools and rising graduation outcomes. s of June)") +
+  scale_x_continuous(name = "School Year (as of June)") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        text = element_text(family = "Times New Roman"))
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "plot",
+        text = element_text(family = "Times New Roman", size = 13))
 
 
 ```
@@ -594,10 +597,10 @@ replacement_schools_vs_all_failing %>%
   ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
-  labs(title = "Average Graduation Rates from 2005-2015",
+  labs(title = "Average Graduation Rates 2005-2015",
        y = "Average Graduation Rate",
        x = "School Year (as of June)",
-       caption ="Values for the treated group in 2006 was omitted due to too few observations \n Values for the pretreatment group was omitted after 2008 due to too few observations") +
+       caption ="Values for the treated group in 2006 were omitted due to too few observations \n Values for the pretreatment group was omitted after 2008 due to too few observations") +
   scale_shape_discrete(name = "", 
                        labels = c("Preatment", 
                                   "Control", 
@@ -622,7 +625,7 @@ replacement_schools_vs_all_failing %>%
   select(year, "Failing Open Schools in 2005", "Small Replacement Schools opened by 2005", "Announced for Closure in 2005") %>% 
   ungroup(year, data_cat)  %>% 
   gt() %>% 
-  tab_header(title = "Average Graduation Rates from 2005-2015") %>% 
+  tab_header(title = "Average Graduation Rates 2005-2015") %>% 
   tab_spanner(label = "Graduation Rates", columns = 2:4) %>% 
   cols_label( "year" = "School Year (as of June)",
               "Failing Open Schools in 2005" = "Control Group",
@@ -694,7 +697,7 @@ replacement_schools_grad_vs_failing %>%
   ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
-  labs(title = "Average Graduation Rates from 2005-2015",
+  labs(title = "Average Graduation Rates 2005-2015",
        y = "Average Graduation Rate",
        x = "School Year (as of June)") +
   scale_shape_discrete(name = "",
@@ -731,7 +734,7 @@ replacement_schools_grad_vs_failing %>%
          "Announced for Closure in 2005") %>% 
   ungroup(year, data_cat)  %>% 
   gt() %>% 
-  tab_header(title = "Average Graduation Rates from 2005-2015") %>% 
+  tab_header(title = "Average Graduation Rates 2005-2015") %>% 
   tab_spanner(label = "Control", columns = 2:4) %>% 
   cols_label(year = "School Year (as of June)", 
              "Large and Operating" = "Open",
@@ -772,7 +775,7 @@ replacement_schools_grad_vs_failing %>%
   ggplot(aes(x = year, y = avg_hs_enrollment, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
-  labs(title = "Average HS Enrollment from 2005-2015",
+  labs(title = "Average HS Enrollment 2005-2015",
        y = "Average HS Enrollment",
        x = "School Year (as of June)") +
   scale_shape_discrete(name = "",
@@ -823,6 +826,7 @@ grad_rates_nest %>%
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
   labs(title = "High School Graduation Rates 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
+       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013)")),
        y = "Graduation Rate",
        x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
@@ -832,7 +836,9 @@ grad_rates_nest %>%
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        text = element_text(family = "Times New Roman"))
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "plot",
+        text = element_text(family = "Times New Roman", size = 13))
 
 ## Chart with changes in graduation rates from 2005-2015 incl. pp and per change
 grad_rates_nest %>% 
@@ -903,6 +909,7 @@ grad_rates_regents_cohort %>%
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
   labs(title = "Regent Diploma Rate per Cohort 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
+       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013)")),
        y = "Regent Diploma Rate (Cohort)",
        x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
@@ -912,7 +919,9 @@ grad_rates_regents_cohort %>%
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        text = element_text(family = "Times New Roman"))
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "plot",
+        text = element_text(family = "Times New Roman", size = 13))
 
 # Create a table for regents diploma
 
@@ -1009,10 +1018,6 @@ grad_rates_advregents_cohort %>%
   geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80))
 ```
 
-```{r join data_join with 2005-2016 }
-
-```
-
 ```{r Comparing Demographic Data of Closed Schools pre-05 and replacement schools post-05, echo = FALSE}
 
 # Track pre-2006 demographic change sin schools that were annoucne for closure in 2005 using SCHMA data
@@ -1036,15 +1041,16 @@ demo_closed05_20002005_plot <- data_join %>%
   ylim(0, .6) +
   theme_classic() +
   labs(title = "Demographics of Pre + Post Treatment",
-       subtitle = "Preatment",
-       y = "Fraction of High School Enrollment",
-       x = "School Year (as of June)") +
+       subtitle = "Pretreatment",
+       y = "Fraction of High School Enrollment") +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0.2),
-        text = element_text(family = "Times New Roman"),
-        axis.title.x = element_text(hjust = 1)) 
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "plot",
+        text = element_text(family = "Times New Roman", size = 13),
+        axis.title.x = element_blank()) 
 
 # Track racial demographic changes in replacement schools from 05-15
 demo_replacement05_20062015_plot <- data_join %>% 
@@ -1061,7 +1067,7 @@ demo_replacement05_20062015_plot <- data_join %>%
         x = "") +
   scale_x_continuous(limits = c(2006, 2009), breaks = c(2006, 2009)) +
   ylim(0, .6) +
-  scale_shape_discrete(name = "Race", labels = c("Asian", "Black", "Hispanic", "White")) +
+  scale_shape_discrete(name = "", labels = c("Asian", "Black", "Hispanic", "White")) +
   theme_classic() +
   theme(axis.text.y = element_blank(),
         axis.line.y = element_blank(),
@@ -1070,11 +1076,21 @@ demo_replacement05_20062015_plot <- data_join %>%
         plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        text = element_text(family = "Times New Roman"))
+        text = element_text(family = "Times New Roman", size = 13))
 
-# Combine above two plots to compare school and repelacement schools 
+# Combine above two plots to compare school and repelacement schools using patchwork package
 
-demo_closed05_20002005_plot + demo_replacement05_20062015_plot
+demo_closed05_20002005_plot + 
+  demo_replacement05_20062015_plot + 
+  
+  # Add plot annotations for source, since labelling the graphs individuallly would
+  # cut off text
+  plot_annotation(caption = expression(paste(italic("Sources: "), "NYCDOE (2013), Research Alliance for NYC Schools (2016)")), 
+                  theme = theme(text = element_text(family = "Times New Roman",
+                                                    size = 13),
+                                plot.caption = element_text(hjust = 0)
+                                )
+                  )
   
 
 
@@ -1154,6 +1170,113 @@ ppe <- data_join %>%
 
 ppe
 
+```
+
+```{r % Poverty for Treatment and Control Groups, echo = FALSE}
+# Graphing poverty rates for treatment/control/pretreatment groups from '06-'15
+
+# Prepare the data to be graphed
+poverty_exp <- data_join %>% 
+  
+  # % free and reduced lunch is a measure of poverty
+  select(dbn, year, fl_or_frl_lunch) %>% 
+  
+  # We only have poverty rate data from 2006 onwards and our study doesn't
+  # go until 2016
+  filter(year >= 2006 & year <= 2015) %>% 
+  filter(!dbn %in% large_failing_schools | year <= 2008) %>% 
+  filter(dbn %in% failing_2005_large_list |
+         dbn %in% replacement_schools |
+         dbn %in% large_failing_schools) %>% 
+  
+  # New column that identifies category group of the observatiion
+  mutate(data_cat = ifelse(dbn %in% large_failing_schools,
+                           "pretreatment",
+                              ifelse(dbn %in% replacement_schools,
+                               "treatment",
+                               "control"))) %>% 
+  group_by(data_cat, year) %>% 
+  nest() %>% 
+  
+  # Calculate the mean poverty rate for each group by year
+  mutate(avg_frl_lunch = map(data, ~mean(.[[2]], na.rm = TRUE)))
+
+# Plot the poverty rate from 2006-2015 by control/treatment group
+poverty_exp %>% 
+  ggplot(aes(x = year, y = as.double(avg_frl_lunch), shape = data_cat)) +
+  geom_line() +
+  geom_point(aes(shape = data_cat), size = 3) +
+  
+  scale_x_continuous(name = "School Year (as of June)",
+                     breaks = c(2006, 2008, 2010, 2012, 2014)) +
+  scale_y_continuous(name = "% of Students Qualifying for Free and Reduced Lunch",
+                     limits = c(50, 100)) +
+  scale_shape_discrete(name = "", 
+                       labels = c("Control", "Pretreatment", "Treatment")) +
+  labs(title = "Average Poverty Rates 2006-2015") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        plot.caption = element_text(hjust = 0.5, face = "italic"),
+        text = element_text(family = "Times New Roman"))
+
+
+```
+
+
+```{r % Poverty for Treatment and Control Groups Broken down into Closed, Shrank, Open, echo = FALSE}
+
+## Graphing treatment and control poverty rates from '06-'15 
+## // control group broken down further
+
+# Prepare the data to be graphed
+poverty_exp_detail <- data_join %>% 
+  
+  # % free and reduced lunch is a measure of poverty
+  select(dbn, year, fl_or_frl_lunch) %>% 
+  
+  # We only have poverty rate data from 2006 onwards and our study doesn't
+  # go until 2016
+  filter(year >= 2006 & year <= 2015) %>% 
+  filter(!dbn %in% large_failing_schools | year <= 2008) %>% 
+  filter(dbn %in% failing_2005_large_list |
+         dbn %in% replacement_schools |
+         dbn %in% large_failing_schools) %>% 
+  
+  # New column that identifies category group of the observation
+  mutate(data_cat = ifelse(dbn %in% large_failing_schools,
+                           "pretreatment",
+                              ifelse(dbn %in% replacement_schools,
+                               "treatment",
+                                 ifelse(dbn %in% failing_2005_large_closed_list,
+                                      "control_closed",
+                                      ifelse(dbn %in% failing_2005_large_open_shrank_list,
+                                             "control_shrank",
+                                             "control_open"))))) %>%
+   group_by(data_cat, year) %>% 
+   nest() %>% 
+  
+   # Calculate the mean poverty rate for each group by year
+   mutate(avg_frl_lunch = map(data, ~mean(.[[2]], na.rm = TRUE)))
+
+# Plot the poverty rate from 2006-2015 by control/treatment group
+poverty_exp_detail %>% 
+  ggplot(aes(x = year, y = as.double(avg_frl_lunch), shape = data_cat)) +
+  geom_line() +
+  geom_point(aes(shape = data_cat), size = 3) +
+  scale_x_continuous(name = "School Year (as of June)",
+                     breaks = c(2006, 2008, 2010, 2012, 2014)) +
+  scale_y_continuous(name = "% of Students Qualifying for Free and Reduced Lunch",
+                     limits = c(40, 100)) +
+  labs(title = "Average Poverty Rates 2006-2015") +
+  theme_classic() +
+  # Match economics paper aesthetic
+  theme(plot.title = element_text(hjust = 0, face = "bold"),
+        plot.title.position = "plot",
+        plot.subtitle = element_text(hjust = 0),
+        plot.caption = element_text(hjust = 0.5, face = "italic"),
+        text = element_text(family = "Times New Roman"))
 
 ```
 
@@ -1277,8 +1400,6 @@ stargazer(regression_ols, regression_tfe,
 ```
 
 ```{r OLS + Time Fixed Effects Regressions: Experiment Population, echo = FALSE}
-
-
 # Time fixed effects regression using plm()
 regression_tfe_exp <- data_join %>%
   ungroup(year) %>% 
@@ -1385,21 +1506,9 @@ stargazer(regression_ols_exp, regression_tfe_exp,
                                "% Free/Reduced Lunch"),
           digits = 4,
           out = "tables/table4.html")
-
-
-
 ```
 
-```{r, echo = FALSE}
-# Remove transfer schools from analysis?
 
-data_join %>% 
-  filter(dbn %in%  replacement_schools) %>% 
-  filter(dbn == "02M565") %>% 
-  # filter(lcgschtyp == "TRANSFER SCHOOL") %>% 
-  select(schnam, dbn, year, lcgschtyp)
-
-```
 
 
 
