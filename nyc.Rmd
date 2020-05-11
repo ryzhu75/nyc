@@ -442,7 +442,7 @@ data_join %>%
   ggplot(aes(x = year, y = n)) +
   geom_col()+ 
   labs(title = "Number of High Schools with Enrollment ≤ 600 2000-2015",
-       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016)"))) +
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016)") +
   scale_y_continuous(name = "# High Schools",
                      limits = c(0, 500)) +
   scale_x_continuous(name = "School Year (as of June)") +
@@ -450,7 +450,7 @@ data_join %>%
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        plot.caption = element_text(hjust = 0),
+        plot.caption = element_text(hjust = 0, face = "italic"),
         plot.caption.position = "plot",
         text = element_text(family = "Times New Roman", size = 13))
 
@@ -593,26 +593,27 @@ replacement_schools_vs_all_failing <- data_join %>%
 replacement_schools_vs_all_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
-  ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
+  ggplot(aes(x = year, y = avg_grad*100, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
   labs(title = "Average Graduation Rates 2005-2015",
-       y = "Average Graduation Rate",
+       y = "Average Graduation Rate (%)",
        x = "School Year (as of June)",
-       caption ="Values for the treated group in 2006 were omitted due to too few observations \n Values for the pretreatment group was omitted after 2008 due to too few observations") +
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016) \nNotes: Values for the treated group in 2005 were omitted due to too few observations. \n           Values for the pretreatment group were omitted after 2008 due to too few observations.") +
   scale_shape_discrete(name = "", 
                        labels = c("Preatment", 
                                   "Control", 
                                   "Treatment"),
                        guide = guide_legend(reverse = TRUE)) +
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
-   scale_y_continuous(limits = c(0.3, 0.8)) +
+   scale_y_continuous(limits = c(30, 80)) +
    theme_classic() +
    theme(plot.title = element_text(hjust = 0, face = "bold"),
          plot.title.position = "plot",
          plot.subtitle = element_text(hjust = 0),
-         plot.caption = element_text(hjust = 0.5, face = "italic"),
-         text = element_text(family = "Times New Roman"))
+         plot.caption = element_text(hjust = 0, face = "italic", size = 9),
+         plot.caption.position = "plot",
+         text = element_text(family = "Times New Roman", size = 13))
 
 
 # Create a table displaying average graduation rates from 05-15, for each school type
@@ -646,7 +647,7 @@ replacement_schools_vs_all_failing %>%
   tab_options(table.width = px(650),
               heading.align = "left",
               heading.border.bottom.style = "hidden",
-              heading.title.font.size = 16
+              heading.title.font.size = 20
               ) 
 
 ```
@@ -693,11 +694,12 @@ replacement_schools_grad_vs_failing %>%
 replacement_schools_grad_vs_failing %>% 
   group_by(year, data_cat) %>% 
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm = TRUE)) %>% 
-  ggplot(aes(x = year, y = avg_grad, shape = data_cat)) +
+  ggplot(aes(x = year, y = avg_grad*100, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
   labs(title = "Average Graduation Rates 2005-2015",
-       y = "Average Graduation Rate",
+       y = "Average Graduation Rate (%)",
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016) \nNotes: Values for the treated group in 2005 were omitted due to too few observations. \n           Values for the pretreatment group were omitted after 2008 due to too few observations.",
        x = "School Year (as of June)") +
   scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
@@ -711,13 +713,16 @@ replacement_schools_grad_vs_failing %>%
                                   "Control: Shrank",
                                   "Control: Closed")) +
    scale_x_continuous(limits = c(2005, 2015), breaks = c(2005, 2010, 2015)) +
-   scale_y_continuous(limits = c(0.3, 0.8)) +
+   scale_y_continuous(limits = c(30, 80)) +
    theme_classic() +
    theme(plot.title = element_text(hjust = 0, face = "bold"),
          plot.title.position = "plot",
          plot.subtitle = element_text(hjust = 0),
-         plot.caption = element_text(hjust = 0.5, face = "italic"),
-         text = element_text(family = "Times New Roman"))
+         plot.caption = element_text(hjust = 0, face = "italic", size = 9),
+         plot.caption.position = "plot",
+         text = element_text(family = "Times New Roman", size = 13))
+
+
 
 # Create a table displaying average graduation rates from 05-15, for each school type
 replacement_schools_grad_vs_failing %>% 
@@ -758,7 +763,7 @@ replacement_schools_grad_vs_failing %>%
   tab_options(table.width = px(650),
               heading.align = "left",
               heading.border.bottom.style = "hidden",
-              heading.title.font.size = 16
+              heading.title.font.size = 20
               ) 
 
 replacement_schools_grad_vs_failing %>% 
@@ -774,9 +779,10 @@ replacement_schools_grad_vs_failing %>%
   ggplot(aes(x = year, y = avg_hs_enrollment, shape = data_cat)) +
   geom_point(aes(shape = data_cat), size = 3) +
   geom_line() +
-  labs(title = "Average HS Enrollment 2005-2015",
+  labs(title = "Average High School Enrollment 2005-2015",
        y = "Average HS Enrollment",
-       x = "School Year (as of June)") +
+       x = "School Year (as of June)",
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016) \nNotes: Values for the treated group in 2005 were omitted due to too few observations. \n           Values for the pretreatment group were omitted after 2008 due to too few observations.") +
   scale_shape_discrete(name = "",
                        breaks = c("Small Replacement Schools opened by 2005",
                                   "Announced for Closure in 2005",
@@ -793,8 +799,9 @@ replacement_schools_grad_vs_failing %>%
    theme(plot.title = element_text(hjust = 0, face = "bold"),
          plot.title.position = "plot",
          plot.subtitle = element_text(hjust = 0),
-         plot.caption = element_text(hjust = 0.5, face = "italic"),
-         text = element_text(family = "Times New Roman"))
+         plot.caption = element_text(hjust = 0, face = "italic", size = 9),
+         plot.caption.position = "plot",
+         text = element_text(family = "Times New Roman", size = 13))
 
 
 data_join %>% 
@@ -818,22 +825,22 @@ grad_rates_nest <- data_join %>%
 
 #Graph the median result with errorbars at 80 and 20
 grad_rates_nest %>% 
-  ggplot(aes(x = year, y = percentile_50)) +
+  ggplot(aes(x = year, y = percentile_50*100)) +
   geom_point() +
-  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
+  geom_errorbar(aes(ymin = percentile_20*100, ymax = percentile_80*100)) +
   labs(title = "High School Graduation Rates 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
-       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013)")),
-       y = "Graduation Rate",
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013)",
+       y = "Graduation Rate (%)",
        x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
                      limits = c(2004, 2016)) +
-  scale_y_continuous(limits = c(.3, 1)) +
+  scale_y_continuous(limits = c(30, 100)) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        plot.caption = element_text(hjust = 0),
+        plot.caption = element_text(hjust = 0, face = "italic"),
         plot.caption.position = "plot",
         text = element_text(family = "Times New Roman", size = 13))
 
@@ -901,22 +908,22 @@ grad_rates_regents_cohort <- grad_rates_clean %>%
 
 #Graph the median result with errorbars at 80 and 20
 grad_rates_regents_cohort %>% 
-  ggplot(aes(x = year, y = percentile_50)) +
+  ggplot(aes(x = year, y = percentile_50*100)) +
   geom_point() +
-  geom_errorbar(aes(ymin = percentile_20, ymax = percentile_80)) +
-  labs(title = "Regent Diploma Rate per Cohort 2005-2015",
+  geom_errorbar(aes(ymin = percentile_20*100, ymax = percentile_80*100)) +
+  labs(title = "Regents Diploma Rate per Cohort 2005-2015",
        subtitle = "20, 50, 80 Percentiles",
-       caption = expression(paste(italic("Sources: "), "NYCDOE (2019), NYCDOE (2013)")),
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013)",
        y = "Regent Diploma Rate (Cohort)",
        x = "School Year (as of June)") +
   scale_x_continuous(breaks = c(2005, 2010, 2015),
                      limits = c(2004, 2016)) +
-  scale_y_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 100)) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        plot.caption = element_text(hjust = 0),
+        plot.caption = element_text(hjust = 0, face = "italic"),
         plot.caption.position = "plot",
         text = element_text(family = "Times New Roman", size = 13))
 
@@ -1030,23 +1037,23 @@ demo_closed05_20002005_plot <- data_join %>%
   group_by(year, demographic) %>% 
   summarize(avg_per = mean(percent, na.rm = TRUE)) %>% 
   # Must use pivot longer on demo_per observations
-  ggplot(aes(x = year, y = avg_per, shape = demographic)) +
+  ggplot(aes(x = year, y = avg_per*100, shape = demographic)) +
   geom_line() +
   geom_point(aes(shape = demographic), size = 2) +
   scale_x_continuous(limits = c(2002,2005),
                      breaks = c(2002,2005)) +
-  ylim(0, .6) +
+  ylim(0, 60) +
   theme_classic() +
-  labs(title = "Demographics of Pre + Post Treatment",
+  labs(title = "Pre/Post Treatment Demographics",
        subtitle = "Pretreatment",
-       y = "Fraction of High School Enrollment") +
+       y = "% of High School Enrollment") +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0.2),
         plot.caption = element_text(hjust = 0),
         plot.caption.position = "plot",
-        text = element_text(family = "Times New Roman", size = 13),
+        text = element_text(family = "Times New Roman", size = 12),
         axis.title.x = element_blank()) 
 
 # Track racial demographic changes in replacement schools from 05-15
@@ -1082,10 +1089,10 @@ demo_closed05_20002005_plot +
   
   # Add plot annotations for source, since labelling the graphs individuallly would
   # cut off text
-  plot_annotation(caption = expression(paste(italic("Sources: "), "NYCDOE (2013), Research Alliance for NYC Schools (2016)")), 
+  plot_annotation(caption = "Sourcees: NYCDOE (2013), Research Alliance for NYC Schools (2016)", 
                   theme = theme(text = element_text(family = "Times New Roman",
                                                     size = 13),
-                                plot.caption = element_text(hjust = 0)
+                                plot.caption = element_text(hjust = 0, face = "italic")
                                 )
                   )
   
@@ -1206,17 +1213,19 @@ poverty_exp %>%
   
   scale_x_continuous(name = "School Year (as of June)",
                      breaks = c(2006, 2008, 2010, 2012, 2014)) +
-  scale_y_continuous(name = "% of Students Qualifying for Free and Reduced Lunch",
+  scale_y_continuous(name = "% Qualifying for Free and Reduced Lunch",
                      limits = c(50, 100)) +
   scale_shape_discrete(name = "", 
                        labels = c("Control", "Pretreatment", "Treatment")) +
-  labs(title = "Average Poverty Rates 2006-2015") +
+  labs(title = "Average Poverty Rates 2006-2015",
+       caption = "Sources: NYCDOE (2019), NYCDOE (2013) \nNotes: Values for the pretreatment group  after 2008 due to too few observations.") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0, face = "bold"),
         plot.title.position = "plot",
         plot.subtitle = element_text(hjust = 0),
-        plot.caption = element_text(hjust = 0.5, face = "italic"),
-        text = element_text(family = "Times New Roman"))
+        plot.caption = element_text(hjust = 0, face = "italic", size = 9),
+        plot.caption.position =  "plot",
+        text = element_text(family = "Times New Roman", size = 13))
 
 
 ```
@@ -1380,7 +1389,7 @@ stargazer(regression_ols, regression_tfe,
           
           # Replaced standard errors with robust standard errors
           se = list(regression_ols$robust[,2], regression_tfe$robust[,2]),
-          title = "Title",
+          title = "Regression Analysis: Total High School Enrollment on Graduation Rates",
           column.labels = c("OLS", "Time Fixed Effects"),
           
           dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
@@ -1391,6 +1400,8 @@ stargazer(regression_ols, regression_tfe,
                                "% Hispanic", 
                                "% White",  
                                "% Free/Reduced Lunch"),
+          # notes = "NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016)",
+          notes.align = "r",
           digits = 4,
           out = "tables/table2.html")
 
