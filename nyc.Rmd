@@ -23,6 +23,7 @@ library(lmtest)
 library(extrafont)
 library(devtools)
 library(ggplot2)
+library(data.table)
 ```
 
 ```{r Read in SCHMA and addon files along with list of replacement and replaced schools, include = FALSE}
@@ -622,28 +623,63 @@ replacement_schools_vs_all_failing %>%
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
   pivot_wider(names_from = data_cat, values_from = avg_grad) %>% 
   filter(year > 2004 & year < 2016) %>% 
-  select(year, "Failing Open Schools in 2005", "Small Replacement Schools opened by 2005", "Announced for Closure in 2005") %>% 
+  clean_names() %>%
+  
+  # Add YoY Changes
+  transform("control_yoy_change" = c(NA, failing_open_schools_in_2005[-1]/failing_open_schools_in_2005[-nrow(.)]-1),
+            "treatment_yoy_change" =  c(NA, small_replacement_schools_opened_by_2005[-1]/small_replacement_schools_opened_by_2005[-nrow(.)]-1)) %>% 
+  select(year, 
+         failing_open_schools_in_2005, 
+         control_yoy_change, 
+         small_replacement_schools_opened_by_2005, 
+         treatment_yoy_change, 
+         announced_for_closure_in_2005) %>% 
+  
+# Create the gt table
   ungroup(year, data_cat)  %>% 
   gt() %>% 
   tab_header(title = "Average Graduation Rates 2005-2015") %>% 
-  tab_spanner(label = "Graduation Rates", columns = 2:4) %>% 
+  tab_spanner(label = "Graduation Rates", columns = 2:6) %>% 
   cols_label( "year" = "School Year (as of June)",
-              "Failing Open Schools in 2005" = "Control Group",
-              "Announced for Closure in 2005" = "Pretreatment",
-              "Small Replacement Schools opened by 2005" = "Treatment") %>% 
-  cols_align(align = "center", columns = 1:4) %>% 
-  fmt_number(columns = 2:4, decimals = 2)  %>% 
+              "failing_open_schools_in_2005" = "Control Group",
+              "control_yoy_change" = "YoYΔ (C)",
+              "announced_for_closure_in_2005" = "Pretreatment",
+              "treatment_yoy_change" = "YoYΔ (T)",
+              "small_replacement_schools_opened_by_2005" = "Treatment") %>% 
+  
+  # Align center
+  cols_align(align = "center", columns = c(1:6)) %>% 
+  
+  # Format decimals
+  fmt_number(columns = 2:6, decimals = 2)  %>% 
+  
+  # Replace all NAs with "-" for readability
+  fmt_missing(columns = TRUE, missing_text = "-") %>% 
+  
+  # Format percentage change columns
+  fmt_percent(columns = c(3,5), decimals = 1) %>% 
     
+  # Format all text to be times new roman and regular weight/style (except for YoY)
   tab_style(style = cell_text(font = "Times New Roman"), 
-            locations = list(cells_column_labels(columns = TRUE),
-                          cells_body(), 
+            locations = list(cells_column_labels(columns = c(1, 2, 4, 6)),
+                          cells_body(columns = c(1, 2, 4, 6)), 
                           cells_title(), 
                           cells_column_spanners(spanners = "Graduation Rates")
                           ) 
             ) %>% 
   
+  # Format YoY change columns to be times new roman in italics
+  tab_style(style = cell_text(font = "Times New Roman", style = "italic"), 
+            locations = list(cells_body(columns = c(3,5)),
+                             cells_column_labels(columns = c(3,5))
+                            )
+            ) %>%
+  
+  # Bold the title
   tab_style(style = cell_text(weight = "bold"),
             locations = cells_title()) %>% 
+  
+  # Change size
   tab_options(table.width = px(650),
               heading.align = "left",
               heading.border.bottom.style = "hidden",
@@ -730,36 +766,74 @@ replacement_schools_grad_vs_failing %>%
   summarize(avg_grad = mean(total_grads_percent_of_cohort, na.rm =TRUE)) %>% 
   pivot_wider(names_from = data_cat, values_from = avg_grad) %>% 
   filter(year > 2004 & year < 2016) %>% 
+  clean_names() %>% 
+
+  # Add YoY Changes
+  transform("control_open_yoy_change" = c(NA, large_and_operating[-1]/large_and_operating[-nrow(.)]-1),
+            "control_shrank_yoy_change" = c(NA, large_and_shrank[-1]/large_and_shrank[-nrow(.)]-1),
+            "control_closed_yoy_change" = c(NA, large_eventually_closed[-1]/large_eventually_closed[-nrow(.)]-1),
+            "treatment_yoy_change" =  c(NA, small_replacement_schools_opened_by_2005[-1]/small_replacement_schools_opened_by_2005[-nrow(.)]-1)) %>% 
   select(year, 
-         "Large and Operating",
-         "Large and Shrank",
-         "Large Eventually Closed",
-         "Small Replacement Schools opened by 2005",
-         "Announced for Closure in 2005") %>% 
+         "large_and_operating",
+         "control_open_yoy_change",
+         "large_and_shrank",
+         "control_shrank_yoy_change",
+         "large_eventually_closed",
+         "control_closed_yoy_change",
+         "small_replacement_schools_opened_by_2005",
+         "treatment_yoy_change",
+         "announced_for_closure_in_2005") %>% 
+  
+  # Create the gt table
   ungroup(year, data_cat)  %>% 
   gt() %>% 
   tab_header(title = "Average Graduation Rates 2005-2015") %>% 
-  tab_spanner(label = "Control", columns = 2:4) %>% 
+  tab_spanner(label = "Control", columns = 2:7) %>% 
   cols_label(year = "School Year (as of June)", 
-             "Large and Operating" = "Open",
-             "Large and Shrank" = "Shrank",
-             "Large Eventually Closed" = "Closed",
-             "Small Replacement Schools opened by 2005" = "Treatment",
-              "Announced for Closure in 2005" = "Pretreatment") %>% 
-  cols_align(align = "center", columns = 1:6) %>% 
-  fmt_number(columns = 2:6, decimals = 2)  %>% 
+             "large_and_operating" = "Open",
+             "control_open_yoy_change" = "YoYΔ",
+             "large_and_shrank" = "Shrank",
+             "control_shrank_yoy_change" = "YoYΔ",
+             "large_eventually_closed" = "Closed",
+             "control_closed_yoy_change" = "YoYΔ",
+             "small_replacement_schools_opened_by_2005" = "Treatment",
+             "treatment_yoy_change" = "YoYΔ",
+             "announced_for_closure_in_2005" = "Pretreatment") %>% 
+  
+  # Align center
+  cols_align(align = "center", columns = 1:10) %>% 
+  
+  # Format decimals 
+  fmt_number(columns = 2:10, decimals = 2)  %>% 
+  
+  # Replace all NAs with "-" for readability
+  fmt_missing(columns = TRUE, missing_text = "-") %>% 
+  
+  # Format percentage change columns 
+  
+  fmt_percent(columns = c(3,5,7,9), decimals = 1) %>% 
+  
+  # Format all text (except for YoY columns) to be Times New Roman and regular weight/style
   tab_style(style = cell_text(font = "Times New Roman"), 
-            locations = list(cells_column_labels(columns = TRUE),
-                          cells_body(), 
+            locations = list(cells_column_labels(columns = c(1,2,4,6,8,10)),
+                          cells_body(columns = c(1,2,4,6,8,10)), 
                           cells_title(), 
                           cells_column_spanners(spanners = "Control")
                           ) 
             ) %>% 
   
-  # Format table to have times new roman font and align heading
+  # Format YoY change columns to be Times New Roman in italics
+  tab_style(style = cell_text(font = "Times New Roman", style = "italic"),
+            locations = list(cells_body(columns = c(3,5,7,9)),
+                             cells_column_labels(columns = c(3,5,7,9))
+                             )
+            ) %>% 
   
+  # Bold the title
   tab_style(style = cell_text(weight = "bold"),
             locations = cells_title()) %>% 
+  
+  # Change size
   tab_options(table.width = px(650),
               heading.align = "left",
               heading.border.bottom.style = "hidden",
@@ -1290,27 +1364,15 @@ poverty_exp_detail %>%
 
 # All Years
 data_join %>% 
+  filter(year >= 2006) %>% 
+  
+  # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>% 
   ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
   geom_point() +
   geom_smooth(method = "lm")
-
-# 2006
-data_join %>% 
-  subset(year == 2006) %>% 
-  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
-  geom_point()
-
-# 2010
-data_join %>% 
-  subset(year == 2010) %>% 
-  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
-  geom_point()
-
-# 2015
-data_join %>% 
-  subset(year == 2015) %>% 
-  ggplot(aes(x = total_hs_enrollment, y = total_grads_percent_of_cohort)) +
-  geom_point()
 
 ```
 
@@ -1322,6 +1384,11 @@ regression_tfe <- data_join %>%
   
   # Not enough observations pre 2006
   subset(year >= 2006) %>% 
+  
+  # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>%
   
   # Multiplied decimal fractions by 100 
   mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
@@ -1362,7 +1429,59 @@ stargazer(regression_tfe,
           out = "tables/table1.html")
 
 
-## OLS Regression + Time Fixed Effects Regression 
+# Time fixed effects level-log regression using plm()
+regression_tfe_level_log <- data_join %>%
+  ungroup(year) %>% 
+  
+  # Not enough observations pre 2006
+  subset(year >= 2006) %>% 
+  
+  # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>% 
+  
+  # Multiplied decimal fractions by 100 
+  mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
+         
+         #Convert year into a factor
+         year = as.factor(year)) %>% 
+  plm(total_grads_percent_of_cohort ~ log(total_hs_enrollment) + asian_per + black_per + hispanic_per + white_per + fl_or_frl_lunch, 
+      data = .,
+      index = "year",
+      
+      # Indicated a fixed effect regression
+      model = "within")
+
+# Check for Heteroskedasticity within the Time-Fixed Effects Model
+# Reject Null Hypothesis of homoskedasticity
+bptest(regression_tfe_level_log)
+
+# Store robust standard errors into regression_tfe$robust  \\ Same as adding "r"
+# at the end of regression in STATA
+regression_tfe_level_log$robust <- coeftest(regression_tfe_level_log, vcovHC(regression_tfe_level_log, type = "HC1"))
+
+# Plot time fixed effect regression
+stargazer(regression_tfe_level_log,
+          
+          # Substitute in robust standard errors
+          se = list(regression_tfe_level_log$robust[,2]),
+          title = "Regression Analysis: Total HS Enrollment and Graduation Rate",
+          header = FALSE,
+          dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
+          
+          covariate.labels = c("Total HS Enrollment (Logged)", 
+                               "% Asian",
+                               "% Black",
+                               "% Hispanic", 
+                               "% White",  
+                               "% Free/Reduced Lunch"),
+          digits = 4,
+          out = "tables/table2.html")
+
+
+
+## OLS Regression + Time Fixed Effects Regression + Time Fixed Effects (level-log)
 
 # Create OLS Regression Model 
 regression_ols <- data_join %>%
@@ -1370,6 +1489,12 @@ regression_ols <- data_join %>%
   
   # Not enough observations pre-2006
   subset(year >= 2006) %>% 
+  
+  # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>% 
+  
   mutate(total_grads_percent_of_cohort = total_grads_percent_of_cohort *100,
          
          #Convert year into a factor
@@ -1385,16 +1510,17 @@ regression_ols <- data_join %>%
 regression_ols$robust <- coeftest(regression_ols, vcovHC(regression_ols, type = "HC1"))
 
 # Plot into a table results of OLS vs. Time Fixed Effects
-stargazer(regression_ols, regression_tfe,
+stargazer(regression_ols, regression_tfe, regression_tfe_level_log,
           
           # Replaced standard errors with robust standard errors
           se = list(regression_ols$robust[,2], regression_tfe$robust[,2]),
           title = "Regression Analysis: Total High School Enrollment on Graduation Rates",
-          column.labels = c("OLS", "Time Fixed Effects"),
+          column.labels = c("OLS", "Time Fixed Effects", "Time Fixed Effects"),
           
           dep.var.labels= "Graduation Rate (% of Grade 9 Cohort)",
           
           covariate.labels = c("Total HS Enrollment", 
+                               "Total HS Enrollment (log)",
                                "% Asian",
                                "% Black",
                                "% Hispanic", 
@@ -1403,7 +1529,7 @@ stargazer(regression_ols, regression_tfe,
           # notes = "NYCDOE (2019), NYCDOE (2013), Research Alliance for NYC Schools (2016)",
           notes.align = "r",
           digits = 4,
-          out = "tables/table2.html")
+          out = "tables/table4.html")
 
 ```
 
@@ -1516,6 +1642,32 @@ stargazer(regression_ols_exp, regression_tfe_exp,
           out = "tables/table4.html")
 ```
 
+```{r}
+data_join %>% 
+  filter(year >= 2005,
+         year < 2016) %>%
+  filter(total_hs_enrollment > 400) %>% 
+    # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>% 
+  group_by(year) %>% 
+  summarize(mean = mean(total_hs_enrollment))
+
+data_join %>% 
+  filter(year >= 2005,
+         year < 2016) %>%
+  filter(total_hs_enrollment < 600) %>% 
+    # Remove special schools
+  filter(lcgschtyp != "TRANSFER SCHOOL",
+         lcgschtyp != "SPECIAL EDUCATION",
+         lcgschtyp != "SUSPENSION CENTER") %>% 
+  group_by(year) %>% 
+  count()
+
+
+
+```
 
 
 
